@@ -18,8 +18,16 @@ class User extends Authenticatable
      * @var array<int, string>
      */
     protected $fillable = [
-        'name',
+        'name', // optional legacy field
+        'first_name',
+        'last_name',
         'email',
+        'phone',
+        'address',
+        'image',
+        'description',
+        'gender',
+        'role',
         'password',
     ];
 
@@ -41,5 +49,7 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
+        'two_factor_secret' => 'encrypted',
+        'two_factor_recovery_codes' => 'encrypted',
     ];
 }
