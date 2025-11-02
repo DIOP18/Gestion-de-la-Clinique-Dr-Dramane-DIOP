@@ -1,0 +1,129 @@
+<div class="auth-container">
+  <nav class="auth-navbar">
+    <div class="nav-content">
+      <div class="logo" (click)="navigateToHome()">
+        <h1>Clinique Dr DRAMANE DIOP</h1>
+      </div>
+      <div class="nav-links">
+        <a routerLink="/">Centre d'aide</a>
+        <a routerLink="/" class="btn-outline">Vous êtes praticien ?</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="auth-content">
+    <div class="auth-card">
+      <div class="card-header">
+        <button class="back-btn" (click)="navigateToHome()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+          </svg>
+          Étape précédente
+        </button>
+      </div>
+
+      <div class="card-body">
+        <div class="brand-icon">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#1565c0" stroke-width="2">
+            <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+          </svg>
+        </div>
+
+        <h2 class="card-title">Se connecter</h2>
+
+        <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+          <div *ngIf="errorMessage" class="alert alert-error">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            {{ errorMessage }}
+          </div>
+
+          <div class="form-group">
+            <label for="email">Adresse email</label>
+            <input
+              id="email"
+              type="email"
+              formControlName="email"
+              class="form-control"
+              placeholder="votre@email.com"
+              [class.error]="loginForm.get('email')?.invalid && loginForm.get('email')?.touched"
+            />
+            <span class="error-text" *ngIf="loginForm.get('email')?.invalid && loginForm.get('email')?.touched">
+              Email invalide
+            </span>
+          </div>
+
+          <div class="form-group">
+            <label for="password">Mot de passe</label>
+            <div class="password-input">
+              <input
+                id="password"
+                [type]="showPassword ? 'text' : 'password'"
+                formControlName="password"
+                class="form-control"
+                placeholder="••••••••"
+                [class.error]="loginForm.get('password')?.invalid && loginForm.get('password')?.touched"
+              />
+              <button type="button" class="toggle-password" (click)="togglePassword()">
+                <svg *ngIf="!showPassword" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+                <svg *ngIf="showPassword" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                  <line x1="1" y1="1" x2="23" y2="23"></line>
+                </svg>
+              </button>
+            </div>
+            <span class="error-text" *ngIf="loginForm.get('password')?.invalid && loginForm.get('password')?.touched">
+              Mot de passe requis
+            </span>
+          </div>
+
+          <div class="form-group" *ngIf="require2FA">
+            <label for="two_factor_code">Code d'authentification à 2 facteurs</label>
+            <input
+              id="two_factor_code"
+              type="text"
+              formControlName="two_factor_code"
+              class="form-control"
+              placeholder="000000"
+              maxlength="6"
+            />
+          </div>
+
+          <div class="form-actions">
+            <a routerLink="/auth/forgot-password" class="link-primary">Mot de passe oublié ?</a>
+          </div>
+
+          <button type="submit" class="btn-submit" [disabled]="loading">
+            <span *ngIf="!loading">Se connecter</span>
+            <span *ngIf="loading" class="loading-spinner">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+              </svg>
+              Connexion...
+            </span>
+          </button>
+        </form>
+
+        <div class="divider">
+          <span>Nouveau sur Clinique Dr DRAMANE DIOP ?</span>
+        </div>
+
+        <button type="button" class="btn-secondary" routerLink="/auth/register">
+          Créer un compte
+        </button>
+
+        <p class="terms">
+          En vous connectant, vous acceptez nos
+          <a href="#">Conditions d'utilisation</a> et notre
+          <a href="#">Politique de confidentialité</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,111 @@
+<div class="home-container">
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="nav-content">
+      <div class="logo">
+        <h1>Clinique Dr DRAMANE DIOP</h1>
+      </div>
+      <div class="nav-actions">
+        <button class="btn-secondary">Vous êtes soignant ?</button>
+        <button class="btn-secondary">Centre d'aide</button>
+        <button class="btn-primary" (click)="navigateToLogin()">
+          Se connecter
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="hero-content">
+      <h2 class="hero-title">Vivez en meilleure santé</h2>
+
+      <div class="search-container">
+        <div class="search-box">
+          <div class="search-input-group">
+            <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <circle cx="11" cy="11" r="8"></circle>
+              <path d="m21 21-4.35-4.35"></path>
+            </svg>
+            <input
+              type="text"
+              placeholder="Spécialité, médecin, établissement..."
+              [(ngModel)]="searchQuery"
+              class="search-input"
+            />
+          </div>
+
+          <div class="search-divider"></div>
+
+          <div class="search-input-group">
+            <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+              <circle cx="12" cy="10" r="3"></circle>
+            </svg>
+            <input
+              type="text"
+              placeholder="Où ?"
+              [(ngModel)]="searchLocation"
+              class="search-input"
+            />
+          </div>
+
+          <button class="btn-search" (click)="onSearch()">
+            Rechercher
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M5 12h14M12 5l7 7-7 7"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="hero-image">
+      <div class="image-placeholder">
+
+      </div>
+    </div>
+  </section>
+
+  <!-- Info Cards -->
+  <section class="info-section">
+    <div class="info-cards">
+      <div class="info-card">
+        <div class="card-icon">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+          </svg>
+        </div>
+        <h3>Prise de rendez-vous facile</h3>
+        <p>Prenez rendez-vous en ligne 24h/24 avec vos praticiens préférés</p>
+      </div>
+
+      <div class="info-card">
+        <div class="card-icon">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="16" y1="2" x2="16" y2="6"></line>
+            <line x1="8" y1="2" x2="8" y2="6"></line>
+            <line x1="3" y1="10" x2="21" y2="10"></line>
+          </svg>
+        </div>
+        <h3>Rappels automatiques</h3>
+        <p>Ne ratez plus jamais un rendez-vous grâce à nos notifications</p>
+      </div>
+
+      <div class="info-card">
+        <div class="card-icon">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+          </svg>
+        </div>
+        <h3>Suivi médical personnalisé</h3>
+        <p>Accédez à votre dossier médical et historique de consultations</p>
+      </div>
+    </div>
+  </section>
+</div>
