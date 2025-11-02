@@ -13,7 +13,6 @@ class TestUsersSeeder extends Seeder
 {
     public function run(): void
     {
-        // Ensure at least one specialty exists
         $specialty = Specialty::first() ?? Specialty::create(['label' => 'Généraliste']);
 
         // Doctor user

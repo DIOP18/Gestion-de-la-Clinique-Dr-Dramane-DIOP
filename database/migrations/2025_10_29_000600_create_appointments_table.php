@@ -18,7 +18,7 @@ return new class extends Migration
             $table->dateTime('debut_at');
             $table->dateTime('fin_at');
 
-            $table->enum('statut', ['PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELED', 'RESCHEDULED'])->default('PENDING');
+            $table->enum('statut', ['EN ATTENTE', 'CONFIRME', 'COMPLETE', 'ANNULE', 'REPORT'])->default('EN ATTENTE');
             $table->string('motif')->nullable();
             $table->string('cree_par_type')->nullable(); // 'PATIENT' ou 'ASSISTANT'
             $table->foreignId('cree_par_user_id')->nullable()->constrained('users');

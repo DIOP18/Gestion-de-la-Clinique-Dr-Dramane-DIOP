@@ -48,7 +48,7 @@ class AuthController extends Controller
         $credentials = $request->validate([
             'email' => ['required','email'],
             'password' => ['required'],
-            
+
         ]);
 
         $user = User::where('email', $credentials['email'])->first();

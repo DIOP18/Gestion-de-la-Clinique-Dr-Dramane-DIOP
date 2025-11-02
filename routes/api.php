@@ -21,8 +21,12 @@ use App\Http\Controllers\TwoFactorController;
 |
 */
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/auth/logout', [AuthController::class, 'logout']);
+    Route::get('/user', function (Request $request) {
+        return $request->user();
+    });
 });
 
 // Public endpoints (visitors can browse available doctors and slots)
@@ -32,7 +36,6 @@ Route::get('/public/doctors/{doctor}/availabilities', [PublicController::class, 
 // Auth
 Route::post('/auth/register', [AuthController::class, 'register']);
 Route::post('/auth/login', [AuthController::class, 'login']);
-Route::post('/auth/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
 
 // 2FA (auth required)
 Route::middleware('auth:sanctum')->group(function () {
