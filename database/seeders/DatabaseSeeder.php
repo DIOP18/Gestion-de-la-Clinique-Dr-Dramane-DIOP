@@ -27,7 +27,7 @@ class DatabaseSeeder extends Seeder
                 'email' => 'admin@clinique.test',
                 'phone' => '+221700000000',
                 'address' => 'Siège clinique',
-                'image' => 'users/admin.png',
+                'image' => 'users/admin.jpg',
                 'description' => 'Administrateur par défaut',
                 'gender' => 'O',
                 'password' => 'admin123456',
