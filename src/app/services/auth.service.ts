@@ -53,16 +53,20 @@ export class AuthService {
   }
 
   login(credentials: LoginRequest): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.API_URL}/auth/login`, credentials).pipe(
-      tap(response => {
-        if (!response.two_factor_required) {
-          this.handleAuthSuccess(response);
-        }
-      }),
-      catchError(error => {
-        console.error('Erreur connexion:', error);
-        return throwError(() => error);
-      })
+    return this.http.get('http://localhost:8000/sanctum/csrf-cookie').pipe(
+      switchMap(() =>
+        this.http.post<AuthResponse>(`${this.API_URL}/auth/login`, credentials).pipe(
+          tap(response => {
+            if (!response.two_factor_required) {
+              this.handleAuthSuccess(response);
+            }
+          }),
+          catchError(error => {
+            console.error('Erreur connexion:', error);
+            return throwError(() => error);
+          })
+        )
+      )
     );
   }
   logout(): Observable<any> {

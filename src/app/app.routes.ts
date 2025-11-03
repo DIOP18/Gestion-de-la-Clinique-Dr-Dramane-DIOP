@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import {AuthGuard} from './guards/auth.guard';
 import {RoleGuard} from './guards/role.guard';
 import {UnauthorizedComponent} from './pages/unauthorized/unauthorized.component';
+import {NavbarComponent} from './pages/admin/navbar/navbar.component';
 
 export const routes: Routes = [
   {
@@ -23,12 +24,17 @@ export const routes: Routes = [
   // Routes protégées - ADMIN
   {
     path: 'admin',
+    component: NavbarComponent,
     canActivate: [AuthGuard, RoleGuard],
     data: { roles: ['ADMINISTRATEUR'] },
     children: [
       {
         path: 'dashboard',
         loadComponent: () => import('./pages/admin/dashboard/dashboard.component').then(m => m.DashboardComponent)
+      },
+      {
+        path: 'specialites',
+        loadComponent: () => import('./pages/admin/specialites/list-specialites.component').then(m => m.ListSpecialitesComponent)
       },
     ]
   },
