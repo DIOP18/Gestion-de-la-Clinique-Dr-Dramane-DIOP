@@ -14,54 +14,35 @@ import { Specialite } from '../../../models/specialite.model';
       <div class="page-header">
         <h1>Gestion des Spécialités</h1>
         <button class="btn-primary" (click)="openModal()">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <line x1="12" y1="5" x2="12" y2="19"></line>
-            <line x1="5" y1="12" x2="19" y2="12"></line>
-          </svg>
           Ajouter une spécialité
         </button>
       </div>
 
-      <div class="alert alert-success" *ngIf="successMessage">
-        {{ successMessage }}
-      </div>
-
-      <div class="alert alert-error" *ngIf="errorMessage">
-        {{ errorMessage }}
-      </div>
+      <div class="alert alert-success" *ngIf="successMessage">{{ successMessage }}</div>
+      <div class="alert alert-error" *ngIf="errorMessage">{{ errorMessage }}</div>
 
       <div class="table-container">
         <table class="data-table">
           <thead>
-            <tr>
-              <th>ID</th>
-              <th>Libellé</th>
-              <th>Date de création</th>
-              <th>Actions</th>
-            </tr>
+          <tr>
+            <th>ID</th>
+            <th>Libellé</th>
+            <th>Prix consultation Spécialité</th>
+            <th>Date de création</th>
+            <th>Actions</th>
+          </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let specialite of specialites">
-              <td>{{ specialite.id }}</td>
-              <td>{{ specialite.label }}</td>
-              <td>{{ specialite.created_at | date:'dd/MM/yyyy' }}</td>
-              <td class="actions">
-                <button class="btn-edit" (click)="editSpecialite(specialite)">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                  </svg>
-                  Modifier
-                </button>
-                <button class="btn-delete" (click)="deleteSpecialite(specialite)">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <polyline points="3 6 5 6 21 6"></polyline>
-                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                  </svg>
-                  Supprimer
-                </button>
-              </td>
-            </tr>
+          <tr *ngFor="let specialite of specialites">
+            <td>{{ specialite.id }}</td>
+            <td>{{ specialite.label }}</td>
+            <td>{{ specialite.prix | number }}</td>
+            <td>{{ specialite.created_at | date:'dd/MM/yyyy' }}</td>
+            <td class="actions">
+              <button class="btn-edit" (click)="editSpecialite(specialite)">Modifier</button>
+              <button class="btn-delete" (click)="deleteSpecialite(specialite)">Supprimer</button>
+            </td>
+          </tr>
           </tbody>
         </table>
       </div>
@@ -73,20 +54,19 @@ import { Specialite } from '../../../models/specialite.model';
             <h2>{{ isEdit ? 'Modifier' : 'Ajouter' }} une spécialité</h2>
             <button class="close-btn" (click)="closeModal()">×</button>
           </div>
+
           <div class="modal-body">
             <form (ngSubmit)="onSubmit()">
               <div class="form-group">
                 <label for="label">Libellé *</label>
-                <input
-                  type="text"
-                  id="label"
-                  [(ngModel)]="formData.label"
-                  name="label"
-                  class="form-control"
-                  placeholder="Ex: Cardiologie"
-                  required
-                />
+                <input type="text" id="label" [(ngModel)]="formData.label" name="label" required class="form-control" />
               </div>
+
+              <div class="form-group">
+                <label for="prix">Prix consultation (XOF) *</label>
+                <input type="number" id="prix" [(ngModel)]="formData.prix" name="prix" required min="0" class="form-control" />
+              </div>
+
               <div class="modal-footer">
                 <button type="button" class="btn-secondary" (click)="closeModal()">Annuler</button>
                 <button type="submit" class="btn-primary" [disabled]="loading">
@@ -331,7 +311,7 @@ export class ListSpecialitesComponent implements OnInit {
   loading = false;
   successMessage = '';
   errorMessage = '';
-  formData = { label: '' };
+  formData = { label: '', prix: 0 };
   selectedId: number | null = null;
 
   constructor(private specialiteService: SpecialiteService) {}
@@ -342,24 +322,20 @@ export class ListSpecialitesComponent implements OnInit {
 
   loadSpecialites(): void {
     this.specialiteService.getAll().subscribe({
-      next: (data) => {
-        this.specialites = data;
-      },
-      error: (error) => {
-        this.showError('Erreur lors du chargement des spécialités');
-      }
+      next: (data) => this.specialites = data,
+      error: () => this.showError('Erreur lors du chargement des spécialités')
     });
   }
 
   openModal(): void {
     this.showModal = true;
     this.isEdit = false;
-    this.formData = { label: '' };
+    this.formData = { label: '', prix: 0 };
   }
 
   closeModal(): void {
     this.showModal = false;
-    this.formData = { label: '' };
+    this.formData = { label: '', prix: 0 };
     this.selectedId = null;
   }
 
@@ -367,22 +343,20 @@ export class ListSpecialitesComponent implements OnInit {
     this.showModal = true;
     this.isEdit = true;
     this.selectedId = specialite.id;
-    this.formData = { label: specialite.label };
+    this.formData = { label: specialite.label, prix: specialite.prix };
   }
 
   onSubmit(): void {
-    if (!this.formData.label.trim()) return;
+    if (!this.formData.label.trim() || this.formData.prix <= 0) return;
 
     this.loading = true;
-    this.errorMessage = '';
-
     const operation = this.isEdit && this.selectedId
       ? this.specialiteService.update(this.selectedId, this.formData)
       : this.specialiteService.create(this.formData);
 
     operation.subscribe({
       next: () => {
-        this.showSuccess(this.isEdit ? 'Spécialité modifiée avec succès' : 'Spécialité ajoutée avec succès');
+        this.showSuccess(this.isEdit ? 'Spécialité modifiée' : 'Spécialité ajoutée');
         this.closeModal();
         this.loadSpecialites();
         this.loading = false;
@@ -395,16 +369,14 @@ export class ListSpecialitesComponent implements OnInit {
   }
 
   deleteSpecialite(specialite: Specialite): void {
-    if (!confirm(`Êtes-vous sûr de vouloir supprimer "${specialite.label}" ?`)) return;
+    if (!confirm(`Supprimer "${specialite.label}" ?`)) return;
 
     this.specialiteService.delete(specialite.id).subscribe({
       next: () => {
-        this.showSuccess('Spécialité supprimée avec succès');
+        this.showSuccess('Spécialité supprimée');
         this.loadSpecialites();
       },
-      error: (error) => {
-        this.showError('Erreur lors de la suppression');
-      }
+      error: () => this.showError('Erreur lors de la suppression')
     });
   }
 

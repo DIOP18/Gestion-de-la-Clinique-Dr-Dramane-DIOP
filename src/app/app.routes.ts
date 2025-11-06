@@ -36,6 +36,10 @@ export const routes: Routes = [
         path: 'specialites',
         loadComponent: () => import('./pages/admin/specialites/list-specialites.component').then(m => m.ListSpecialitesComponent)
       },
+      {
+        path: 'medecins',
+        loadComponent: () => import('./pages/admin/users/list-users.component').then(m => m.ListUsersComponent)
+      },
     ]
   },
 
