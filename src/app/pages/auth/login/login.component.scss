@@ -125,6 +125,46 @@
     color: #c62828;
     border-left: 4px solid #c62828;
   }
+
+}
+.alert {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  font-size: 0.95rem;
+
+  svg {
+    flex-shrink: 0;
+    stroke-width: 2;
+  }
+
+  p {
+    margin: 0;
+    line-height: 1.5;
+  }
+
+  &.alert-info {
+    background: #dbeafe;
+    border: 1px solid #3b82f6;
+    color: #1e40af;
+
+    svg {
+      stroke: #3b82f6;
+    }
+  }
+
+  &.alert-error {
+    background: #fee2e2;
+    border: 1px solid #ef4444;
+    color: #991b1b;
+
+    svg {
+      stroke: #ef4444;
+    }
+  }
 }
 
 .form-group {

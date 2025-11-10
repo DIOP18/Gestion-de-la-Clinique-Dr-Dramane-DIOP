@@ -31,6 +31,7 @@
             ],
             "styles": [
               "src/styles.scss"
+
             ]
           },
           "configurations": {
@@ -88,7 +89,10 @@
               }
             ],
             "styles": [
-              "src/styles.scss"
+              "src/styles.scss",
+              "node_modules/@fullcalendar/core/index.css",
+              "node_modules/@fullcalendar/daygrid/index.css",
+              "node_modules/@fullcalendar/timegrid/index.css"
             ]
           }
         }

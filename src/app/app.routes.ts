@@ -3,12 +3,17 @@ import {AuthGuard} from './guards/auth.guard';
 import {RoleGuard} from './guards/role.guard';
 import {UnauthorizedComponent} from './pages/unauthorized/unauthorized.component';
 import {NavbarComponent} from './pages/admin/navbar/navbar.component';
+import {NavbarmedecinComponent} from './pages/medecin/navbar/navbarmedecin.component';
+import {NavbarPatComponent} from './pages/patient/navbar/navbarPat.component';
+import {CalendarComponent} from './pages/calendar/calendar.component';
 
 export const routes: Routes = [
   {
     path: '',
     loadComponent: () => import('./pages/home/home.component').then(m => m.HomeComponent),
   },
+  { path: 'calendar', component: CalendarComponent },
+
 
 
 
@@ -46,12 +51,17 @@ export const routes: Routes = [
   // Routes protégées - MEDECIN
   {
     path: 'medecin',
+    component: NavbarmedecinComponent,
     canActivate: [AuthGuard, RoleGuard],
     data: { roles: ['MEDECIN'] },
     children: [
       {
         path: 'dashboard',
         loadComponent: () => import('./pages/medecin/dashboard/dashboard.component').then(m => m.DashboardComponent)
+      },
+      {
+        path: 'disponibilites',
+        loadComponent: () => import('./pages/medecin/disponibilites/disponibilites.component').then(m => m.DisponibilitesComponent)
       },
     ]
   },
@@ -73,6 +83,8 @@ export const routes: Routes = [
   // Routes protégées - PATIENT
   {
     path: 'patient',
+    component: NavbarPatComponent,
+
     canActivate: [AuthGuard, RoleGuard],
 
     data: { roles: ['PATIENT'] },

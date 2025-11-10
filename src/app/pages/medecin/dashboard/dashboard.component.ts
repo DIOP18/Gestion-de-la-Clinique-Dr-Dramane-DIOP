@@ -10,6 +10,7 @@ import { User } from '../../../models/auth.model';
   template: `
     <div class="dashboard-container">
       <div class="dashboard-header">
+        <div class="page-header">
         <h1>Dashboard médecin</h1>
         <button class="btn btn-danger" (click)="logout()">Déconnexion</button>
       </div>
@@ -23,6 +24,7 @@ import { User } from '../../../models/auth.model';
           </div>
         </div>
       </div>
+    </div>
     </div>
   `,
   styles: [`
@@ -41,6 +43,15 @@ import { User } from '../../../models/auth.model';
       padding: 1.5rem;
       border-radius: 12px;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+    .page-header {
+      margin-bottom: 2rem;
+
+      h1 {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #1a237e;
+      }
     }
 
     .dashboard-content {

@@ -153,17 +153,6 @@
             </select>
           </div>
 
-          <div class="form-group">
-            <label for="description">Description</label>
-            <textarea
-              id="description"
-              formControlName="description"
-              class="form-control"
-              rows="3"
-              placeholder="Parlez-nous un peu de vous..."
-            ></textarea>
-          </div>
-
           <button type="submit" class="btn-submit" [disabled]="loading">
             <span *ngIf="!loading">S'inscrire</span>
             <span *ngIf="loading" class="loading-spinner">

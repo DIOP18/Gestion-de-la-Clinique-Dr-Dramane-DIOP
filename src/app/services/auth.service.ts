@@ -31,7 +31,6 @@ export class AuthService {
     formData.append('password', data.password);
     formData.append('phone', data.phone);
     formData.append('address', data.address);
-    formData.append('description', data.description);
     formData.append('gender', data.gender);
     formData.append('image', data.image);
 
@@ -84,10 +83,18 @@ export class AuthService {
   }
 
   private handleAuthSuccess(response: AuthResponse): void {
+    // Sauvegarder le token et l'utilisateur
     localStorage.setItem('token', response.token);
     localStorage.setItem('user', JSON.stringify(response.user));
     this.currentUserSubject.next(response.user);
-    this.redirectByRole(response.user.role);
+    const returnUrl = sessionStorage.getItem('returnUrl');
+
+    if (returnUrl) {
+      sessionStorage.removeItem('returnUrl');
+      this.router.navigateByUrl(returnUrl);
+    } else {
+      this.redirectByRole(response.user.role);
+    }
   }
 
   private redirectByRole(role: UserRole): void {
@@ -124,4 +131,7 @@ export class AuthService {
     const user = this.getCurrentUser();
     return user ? roles.includes(user.role) : false;
   }
+  // Dans auth.service.ts
+
+
 }

@@ -1,0 +1,156 @@
+<div class="calendar-container">
+  <!-- Header -->
+  <div class="calendar-header">
+    <button class="btn-back" (click)="goBack()">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <path d="M19 12H5M12 19l-7-7 7-7"/>
+      </svg>
+      Retour
+    </button>
+
+    <div class="doctor-info">
+      <h2>Dr {{ doctorName }}</h2>
+      <p>{{ specialty }}</p>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="isLoading" class="loading-overlay">
+    <div class="spinner"></div>
+    <p>Chargement des disponibilités...</p>
+  </div>
+
+  <!-- Calendrier -->
+  <div class="calendar-wrapper">
+    <full-calendar [options]="calendarOptions"></full-calendar>
+  </div>
+
+  <!-- Légende -->
+  <div class="calendar-legend">
+    <div class="legend-item">
+      <span class="legend-color disponible"></span>
+      <span>Créneaux disponibles</span>
+    </div>
+    <div class="legend-item">
+      <span class="legend-color occupe"></span>
+      <span>Créneaux réservés</span>
+    </div>
+  </div>
+
+  <!-- MODAL CONFIRMATION -->
+  <div *ngIf="showConfirmModal" class="modal-overlay" (click)="closeConfirmModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Confirmer le rendez-vous</h3>
+        <button class="btn-close" (click)="closeConfirmModal()">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M18 6L6 18M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="appointment-details">
+          <div class="detail-item">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/>
+              <line x1="8" y1="2" x2="8" y2="6"/>
+              <line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+            <span>{{ formatDate(selectedSlot?.start) }}</span>
+          </div>
+
+          <div class="detail-item">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+            <span>{{ formatTime(selectedSlot?.start) }} - {{ formatTime(selectedSlot?.end) }}</span>
+          </div>
+
+          <div class="detail-item">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>
+            <span>Dr {{ doctorName }}</span>
+          </div>
+
+          <div class="detail-item">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+            </svg>
+            <span>{{ specialty }}</span>
+          </div>
+        </div>
+
+        <div class="info-box">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="16" x2="12" y2="12"/>
+            <line x1="12" y1="8" x2="12.01" y2="8"/>
+          </svg>
+          <p>Vous devez vous connecter ou créer un compte pour confirmer votre rendez-vous.</p>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="closeConfirmModal()">Annuler</button>
+        <button class="btn btn-primary" (click)="confirmBooking()">Prendre ce rendez-vous</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL MOTIF -->
+  <div *ngIf="showMotifModal" class="modal-overlay" (click)="closeMotifModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Motif du rendez-vous</h3>
+        <button class="btn-close" (click)="closeMotifModal()">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M18 6L6 18M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="appointment-summary">
+          <p><strong>Date :</strong> {{ formatDate(selectedSlot?.start) }}</p>
+          <p><strong>Heure :</strong> {{ formatTime(selectedSlot?.start) }}</p>
+          <p><strong>Médecin :</strong> Dr {{ doctorName }}</p>
+        </div>
+
+        <div class="form-group">
+          <label for="motif">Motif de consultation *</label>
+          <textarea
+            id="motif"
+            [(ngModel)]="motif"
+            rows="4"
+            placeholder="Ex: Consultation générale, douleurs abdominales, contrôle annuel..."
+            maxlength="500"
+            [disabled]="isSubmitting"
+          ></textarea>
+          <small>{{ motif.length }}/500 caractères</small>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="closeMotifModal()" [disabled]="isSubmitting">
+          Annuler
+        </button>
+        <button
+          class="btn btn-primary"
+          (click)="submitAppointment()"
+          [disabled]="!motif.trim() || isSubmitting"
+        >
+          <span *ngIf="!isSubmitting">Confirmer le rendez-vous</span>
+          <span *ngIf="isSubmitting">
+            <div class="btn-spinner"></div>
+            Confirmation en cours...
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -616,6 +616,6 @@ export class ListUsersComponent implements OnInit {
   showError(message: string): void {
     this.errorMessage = message;
     this.successMessage = '';
-    setTimeout(() => this.errorMessage = '', 5000);
+    setTimeout(() => this.errorMessage = '', 20000);
   }
 }

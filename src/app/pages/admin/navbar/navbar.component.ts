@@ -1,4 +1,3 @@
-// src/app/shared/admin-navbar/navbar.component.ts
 
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';

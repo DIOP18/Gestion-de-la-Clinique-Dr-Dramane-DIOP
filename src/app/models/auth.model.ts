@@ -10,7 +10,6 @@ export interface User {
   phone: string;
   address: string;
   image: string | null;
-  description: string;
   gender: Gender;
   role: UserRole;
   two_factor_secret?: string | null;

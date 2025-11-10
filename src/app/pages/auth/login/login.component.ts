@@ -1,7 +1,7 @@
-import { Component } from '@angular/core';
+import {Component, OnInit} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
+import {ActivatedRoute, Router, RouterModule} from '@angular/router';
 import { AuthService } from '../../../services/auth.service';
 
 @Component({
@@ -11,17 +11,19 @@ import { AuthService } from '../../../services/auth.service';
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.scss']
 })
-export class LoginComponent {
+export class LoginComponent implements OnInit {
   loginForm: FormGroup;
   loading = false;
   errorMessage = '';
   showPassword = false;
   require2FA = false;
+  infoMessage = '';
 
   constructor(
     private fb: FormBuilder,
     private authService: AuthService,
-    private router: Router
+    private router: Router,
+    private route: ActivatedRoute
   ) {
     this.loginForm = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
@@ -29,6 +31,16 @@ export class LoginComponent {
       two_factor_code: ['']
     });
   }
+
+  ngOnInit(): void {
+    this.route.queryParams.subscribe(params => {
+      if (params['returnUrl']) {
+        sessionStorage.setItem('returnUrl', params['returnUrl']);
+      }
+      if (params['message']) {
+        this.infoMessage = params['message'];
+      }
+    });    }
 
   onSubmit(): void {
     if (this.loginForm.valid) {
@@ -44,14 +56,26 @@ export class LoginComponent {
         },
         error: (error) => {
           this.loading = false;
-          this.errorMessage = error.error?.message || 'Une erreur est survenue';
+          this.errorMessage = error.error?.message || 'Une erreur est survenue lors de la connexion';
         }
+      });
+    } else {
+      Object.keys(this.loginForm.controls).forEach(key => {
+        this.loginForm.get(key)?.markAsTouched();
       });
     }
   }
 
+
   togglePassword(): void {
     this.showPassword = !this.showPassword;
+  }
+  get email() {
+    return this.loginForm.get('email');
+  }
+
+  get password() {
+    return this.loginForm.get('password');
   }
 
   navigateToHome(): void {
