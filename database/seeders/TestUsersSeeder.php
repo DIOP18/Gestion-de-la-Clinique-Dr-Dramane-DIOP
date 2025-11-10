@@ -18,22 +18,23 @@ class TestUsersSeeder extends Seeder
         // Doctor user
         if (!User::where('email', 'medecin@clinique.test')->exists()) {
             $u = User::create([
-                'first_name' => 'Jean',
-                'last_name' => 'Medecin',
-                'name' => 'Jean Medecin',
+                'first_name' => 'SODA',
+                'last_name' => 'DIOP',
+                'name' => 'Soda DIOP',
                 'email' => 'medecin@clinique.test',
                 'phone' => '+221711111111',
                 'address' => 'Cabinet A',
-                'image' => 'users/medecin.png',
-                'description' => 'Médecin test',
+                'image' => 'users/imagemedical.png',
                 'gender' => 'M',
                 'password' => Hash::make('password123'),
                 'role' => 'MEDECIN',
             ]);
+
             Doctor::create([
                 'user_id' => $u->id,
                 'num_ordre' => 'ORD-000001',
                 'specialty_id' => $specialty->id,
+                'description' => 'Médecin test',
             ]);
         }
 
@@ -47,11 +48,11 @@ class TestUsersSeeder extends Seeder
                 'phone' => '+221722222222',
                 'address' => 'Accueil',
                 'image' => 'users/assistant.png',
-                'description' => 'Assistant test',
                 'gender' => 'F',
                 'password' => Hash::make('password123'),
                 'role' => 'ASSISTANT',
             ]);
+
             Assistant::create([
                 'user_id' => $u->id,
                 'num_employe' => 'EMP-000001',
@@ -59,5 +60,3 @@ class TestUsersSeeder extends Seeder
         }
     }
 }
-
-

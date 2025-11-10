@@ -15,7 +15,6 @@ return new class extends Migration
         DB::table('users')->whereNull('phone')->update(['phone' => '']);
         DB::table('users')->whereNull('address')->update(['address' => '']);
         DB::table('users')->whereNull('image')->update(['image' => '']);
-        DB::table('users')->whereNull('description')->update(['description' => '']);
         DB::table('users')->whereNull('gender')->update(['gender' => 'O']);
         DB::table('users')->whereNull('role')->update(['role' => 'PATIENT']);
 
@@ -25,7 +24,6 @@ return new class extends Migration
             $table->string('phone')->default('')->nullable(false)->change();
             $table->string('address')->default('')->nullable(false)->change();
             $table->string('image')->default('')->nullable(false)->change();
-            $table->text('description')->nullable(false)->change();
             $table->enum('gender', ['M', 'F', 'O'])->default('O')->nullable(false)->change();
             $table->enum('role', ['ADMINISTRATEUR', 'MEDECIN', 'ASSISTANT', 'PATIENT'])->default('PATIENT')->nullable(false)->change();
         });

@@ -18,7 +18,6 @@ class AuthController extends Controller
             'password' => ['required', Password::min(8)],
             'phone' => ['required','string','max:30'],
             'address' => ['required','string','max:255'],
-            'description' => ['required','string'],
             'gender' => ['required','in:M,F,O'],
             'image' => ['required','image','mimes:jpg,jpeg,png,webp','max:2048'],
         ]);
@@ -33,7 +32,6 @@ class AuthController extends Controller
             'phone' => $data['phone'],
             'address' => $data['address'],
             'image' => $imagePath,
-            'description' => $data['description'],
             'gender' => $data['gender'],
             'password' => Hash::make($data['password']),
             'role' => 'PATIENT',

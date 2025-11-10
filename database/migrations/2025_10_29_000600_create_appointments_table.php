@@ -32,7 +32,7 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('appointments');
+        Schema::dropIfExists('rendez_vous'); // Corriger ici
     }
 };
 

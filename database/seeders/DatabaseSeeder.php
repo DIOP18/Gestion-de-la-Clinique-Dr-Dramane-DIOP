@@ -28,7 +28,6 @@ class DatabaseSeeder extends Seeder
                 'phone' => '+221700000000',
                 'address' => 'Siège clinique',
                 'image' => 'users/admin.jpg',
-                'description' => 'Administrateur par défaut',
                 'gender' => 'O',
                 'password' => 'admin123456',
                 'role' => 'ADMINISTRATEUR',

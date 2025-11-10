@@ -1,11 +1,14 @@
 <?php
 
+use App\Http\Controllers\DoctorController;
+use App\Http\Controllers\RendezVousController;
+use App\Http\Controllers\SpecialtyController;
+use App\Http\Controllers\VisitorAppointmentController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\PublicController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DisponibiliteController;
-use App\Http\Controllers\RendezVousController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\StatsController;
 use App\Http\Controllers\TwoFactorController;
@@ -22,16 +25,28 @@ use App\Http\Controllers\TwoFactorController;
 */
 
 
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'check.blocked'])->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::get('/user', function (Request $request) {
         return $request->user();
     });
 });
+// Routes publiques
+Route::get('/availability/{availabilityId}/check', [VisitorAppointmentController::class, 'checkAvailability']);
+
+// Routes protégées (nécessitent authentification)
+Route::middleware(['auth:sanctum', 'check.blocked'])->group(function () {
+    Route::post('/visitor/appointments', [VisitorAppointmentController::class, 'createFromVisitor']);
+});
 
 // Public endpoints (visitors can browse available doctors and slots)
 Route::get('/public/doctors', [PublicController::class, 'listDoctors']);
 Route::get('/public/doctors/{doctor}/availabilities', [PublicController::class, 'doctorAvailabilities']);
+Route::get('/specialties', [SpecialtyController::class, 'index']);
+Route::get('/doctors', [DoctorController::class, 'index']);
+Route::get('/doctors/search', [DoctorController::class, 'search']);
+Route::get('/doctors/{id}', [DoctorController::class, 'show']);
+Route::get('/doctors/{doctorId}/disponibilites', [DisponibiliteController::class, 'getByDoctor']);
 
 // Auth
 Route::post('/auth/register', [AuthController::class, 'register']);
@@ -45,7 +60,7 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 // Protected endpoints (stubs to be implemented)
-Route::middleware(['auth:sanctum', 'role:ADMINISTRATEUR'])->group(function () {
+Route::middleware(['auth:sanctum', 'check.blocked','role:ADMINISTRATEUR'])->group(function () {
     // Admin: manage users (CRUD + block)
     Route::get('/users', [AdminController::class, 'usersIndex']);
     Route::get('/users/{user}', [AdminController::class, 'usersShow']);
@@ -72,7 +87,7 @@ Route::middleware(['auth:sanctum', 'role:ADMINISTRATEUR'])->group(function () {
     Route::get('/stats', [StatsController::class, 'admin']);
 });
 
-Route::middleware(['auth:sanctum', 'role:MEDECIN'])->group(function () {
+Route::middleware(['auth:sanctum', 'check.blocked','role:MEDECIN'])->group(function () {
     // Médecin: disponibilités CRUD
     Route::get('/medecin/disponibilites', [DisponibiliteController::class, 'index']);
     Route::post('/medecin/disponibilites', [DisponibiliteController::class, 'store']);
@@ -91,7 +106,7 @@ Route::middleware(['auth:sanctum', 'role:MEDECIN'])->group(function () {
     Route::get('/medecin/stats', [StatsController::class, 'doctor']);
 });
 
-Route::middleware(['auth:sanctum', 'role:ASSISTANT'])->group(function () {
+Route::middleware(['auth:sanctum','check.blocked', 'role:ASSISTANT'])->group(function () {
     // Assistant: créer rendez-vous pour un patient, lister ceux qu'il programme
     Route::post('/assistant/rendez-vous', [RendezVousController::class, 'assistantCreate']);
     Route::get('/assistant/rendez-vous', [RendezVousController::class, 'listForAssistant']);

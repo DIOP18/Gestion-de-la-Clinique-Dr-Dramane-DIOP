@@ -26,10 +26,14 @@ class Availability extends Model
         return $this->belongsTo(Doctor::class);
     }
 
+
     public function appointment(): HasOne
     {
-        return $this->hasOne(Appointment::class);
+        return $this->hasOne(Appointment::class, 'availability_id');
     }
+    protected $casts = [
+        'date' => 'date:Y-m-d',
+    ];
 }
 
 
