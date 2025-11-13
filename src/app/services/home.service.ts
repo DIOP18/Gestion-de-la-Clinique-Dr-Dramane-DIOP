@@ -45,8 +45,17 @@ export class HomeService {
 
     return this.http.post(`${this.API_URL}/visitor/appointments`, data, { headers });
   }
+  createAppointment(data: any): Observable<any> {
+    const token = localStorage.getItem('token'); // ou sessionStorage selon votre config
+    const headers = {
+      'Authorization': `Bearer ${token}`
+    };
+
+    return this.http.post(`${this.API_URL}/patient/rendez-vous`, data, { headers });
+  }
 
   isAuthenticated(): boolean {
     return !!localStorage.getItem('token');
   }
+
 }

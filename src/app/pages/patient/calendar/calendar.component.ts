@@ -8,7 +8,7 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import frLocale from '@fullcalendar/core/locales/fr';
-import { HomeService } from '../../services/home.service';
+import { HomeService } from '../../../services/home.service';
 
 @Component({
   selector: 'app-calendar',
@@ -24,7 +24,6 @@ export class CalendarComponent implements OnInit {
   isLoading = false;
 
   // Modal states
-  showConfirmModal = false;
   showMotifModal = false;
   selectedSlot: any = null;
   motif = '';
@@ -59,7 +58,10 @@ export class CalendarComponent implements OnInit {
     },
     displayEventTime: true,
     displayEventEnd: true,
-    eventDisplay: 'block'
+    eventDisplay: 'block',
+    eventClassNames: (arg) => {
+      return arg.event.extendedProps['disponible'] ? ['disponible-event'] : ['occupe-event'];
+    }
   };
 
   constructor(
@@ -77,47 +79,7 @@ export class CalendarComponent implements OnInit {
       if (this.doctorId) {
         this.loadDisponibilites();
       }
-
-      // Gestion du retour après login/inscription
-      this.handleReturnFromAuth();
     });
-  }
-
-  /**
-   * Gère le retour après login/inscription
-   */
-  private handleReturnFromAuth(): void {
-    const pendingSlotId = sessionStorage.getItem('pending_slot_id');
-
-    if (pendingSlotId && this.homeService.isAuthenticated()) {
-      const slotData = sessionStorage.getItem('pending_slot_data');
-
-      if (slotData) {
-        this.selectedSlot = JSON.parse(slotData);
-
-        // Vérifier que le créneau est toujours disponible
-        this.homeService.checkAvailability(parseInt(pendingSlotId)).subscribe({
-          next: (response) => {
-            if (response.available) {
-              // Créneau toujours dispo, ouvrir modal motif
-              this.showMotifModal = true;
-            } else {
-              alert('Désolé, ce créneau a été réservé entre temps.');
-              this.loadDisponibilites(); // Recharger
-            }
-          },
-          error: (err) => {
-            console.error('Erreur vérification disponibilité:', err);
-            alert('Erreur lors de la vérification du créneau.');
-          },
-          complete: () => {
-            // Nettoyer le storage
-            sessionStorage.removeItem('pending_slot_id');
-            sessionStorage.removeItem('pending_slot_data');
-          }
-        });
-      }
-    }
   }
 
   loadDisponibilites(month?: number, year?: number): void {
@@ -152,56 +114,37 @@ export class CalendarComponent implements OnInit {
   handleEventClick(clickInfo: EventClickArg): void {
     const event = clickInfo.event;
 
+    // Vérifier si le créneau est disponible
+    if (!event.extendedProps['disponible']) {
+      alert('Ce créneau n\'est pas disponible');
+      return;
+    }
+
     this.selectedSlot = {
       id: event.id,
       title: event.title,
       start: event.start,
       end: event.end,
-      doctorId: this.doctorId
+      doctorId: this.doctorId,
+      availabilityId: event.extendedProps['availability_id'] || event.id
     };
 
-    // Ouvrir le modal de confirmation
-    this.showConfirmModal = true;
+    // Vérifier la disponibilité en temps réel avant d'ouvrir le modal
+    this.checkAndOpenModal();
   }
 
-  closeConfirmModal(): void {
-    this.showConfirmModal = false;
-    this.selectedSlot = null;
-  }
-
-  confirmBooking(): void {
-    // Vérifier si l'utilisateur est authentifié
-    if (!this.homeService.isAuthenticated()) {
-      // Sauvegarder le créneau sélectionné
-      sessionStorage.setItem('pending_slot_id', this.selectedSlot.id);
-      sessionStorage.setItem('pending_slot_data', JSON.stringify(this.selectedSlot));
-
-      this.closeConfirmModal();
-
-      // Rediriger vers login avec returnUrl
-      const currentUrl = this.router.url;
-      this.router.navigate(['/login'], {
-        queryParams: {
-          returnUrl: currentUrl,
-          message: 'Veuillez vous connecter ou créer un compte pour confirmer votre rendez-vous'
-        }
-      });
-      return;
-    }
-
-    // Si déjà authentifié, vérifier la disponibilité puis ouvrir modal motif
+  checkAndOpenModal(): void {
     this.isLoading = true;
 
-    this.homeService.checkAvailability(parseInt(this.selectedSlot.id)).subscribe({
+    this.homeService.checkAvailability(parseInt(this.selectedSlot.availabilityId)).subscribe({
       next: (response) => {
         this.isLoading = false;
 
         if (response.available) {
-          this.showConfirmModal = false;
           this.showMotifModal = true;
         } else {
           alert('Désolé, ce créneau vient d\'être réservé.');
-          this.closeConfirmModal();
+          this.selectedSlot = null;
           this.loadDisponibilites();
         }
       },
@@ -209,6 +152,7 @@ export class CalendarComponent implements OnInit {
         this.isLoading = false;
         console.error('Erreur vérification:', err);
         alert('Erreur lors de la vérification du créneau.');
+        this.selectedSlot = null;
       }
     });
   }
@@ -228,42 +172,40 @@ export class CalendarComponent implements OnInit {
     this.isSubmitting = true;
 
     const appointmentData = {
-      availability_id: parseInt(this.selectedSlot.id),
+      doctor_id: this.doctorId,
+      availability_id: parseInt(this.selectedSlot.availabilityId),
+      debut_at: this.selectedSlot.start.toISOString(),
+      fin_at: this.selectedSlot.end.toISOString(),
       motif: this.motif.trim()
     };
 
-    this.homeService.createVisitorAppointment(appointmentData).subscribe({
+    this.homeService.createAppointment(appointmentData).subscribe({
       next: (response) => {
         this.isSubmitting = false;
-        alert('✅ Rendez-vous créé avec succès !\n\nVous recevrez une confirmation par email.');
+        alert('Rendez-vous confirmé avec succès !');
         this.closeMotifModal();
-        this.loadDisponibilites(); // Recharger pour masquer le créneau réservé
+        this.router.navigate(['/patient/mes-rendez-vous']);
       },
       error: (err) => {
         this.isSubmitting = false;
-        console.error('Erreur création RDV:', err);
+        console.error('Erreur création rendez-vous:', err);
 
-        if (err.status === 409) {
-          alert('❌ Désolé, ce créneau vient d\'être réservé par un autre patient.');
-          this.closeMotifModal();
-          this.loadDisponibilites();
-        } else if (err.status === 401) {
-          alert('🔒 Votre session a expiré. Veuillez vous reconnecter.');
-          sessionStorage.setItem('pending_slot_id', this.selectedSlot.id);
-          sessionStorage.setItem('pending_slot_data', JSON.stringify(this.selectedSlot));
-          this.router.navigate(['/login'], {
-            queryParams: { returnUrl: this.router.url }
-          });
+        if (err.status === 401) {
+          alert('Vous devez être connecté pour prendre un rendez-vous');
+          this.router.navigate(['/auth/login']);
+        } else if (err.error?.message) {
+          alert(err.error.message);
         } else {
-          const errorMsg = err.error?.error || 'Erreur lors de la création du rendez-vous';
-          alert(`❌ ${errorMsg}`);
+          alert('Erreur lors de la création du rendez-vous. Veuillez réessayer.');
         }
       }
     });
   }
 
+  ///////Service de mailing a implementer
+
   goBack(): void {
-    this.router.navigate(['/']);
+    this.router.navigate(['/patient/dashboard']);
   }
 
   formatDate(date: Date | null): string {

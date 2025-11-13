@@ -93,6 +93,14 @@ export const routes: Routes = [
         path: 'dashboard',
         loadComponent: () => import('./pages/patient/dashboard/dashboard.component').then(m => m.DashboardComponent)
       },
+      {
+        path: 'mes-rendez-vous',
+        loadComponent:()=>import('./pages/patient/rendez-vous/rendez-vous.component').then(m => m.RendezVousComponent)
+      },
+      {
+        path: 'calendar',
+        loadComponent: () => import('./pages/patient/calendar/calendar.component').then(m => m.CalendarComponent)
+      }
     ]
   },
   {
