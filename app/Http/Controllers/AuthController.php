@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Patient;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -9,8 +10,7 @@ use Illuminate\Validation\Rules\Password;
 
 class AuthController extends Controller
 {
-    public function register(Request $request)
-    {
+    public function register(Request $request) {
         $data = $request->validate([
             'first_name' => ['required','string','max:255'],
             'last_name' => ['required','string','max:255'],
@@ -35,6 +35,11 @@ class AuthController extends Controller
             'gender' => $data['gender'],
             'password' => Hash::make($data['password']),
             'role' => 'PATIENT',
+        ]);
+
+        // AJOUTER CES LIGNES ICI
+        Patient::create([
+            'user_id' => $user->id,
         ]);
 
         $token = $user->createToken('api')->plainTextToken;

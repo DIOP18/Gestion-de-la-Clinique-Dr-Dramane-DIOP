@@ -117,9 +117,12 @@ Route::middleware(['auth:sanctum','check.blocked', 'role:ASSISTANT'])->group(fun
 });
 
 Route::middleware(['auth:sanctum', 'role:PATIENT'])->group(function () {
+
+
     // Patient: créer/lister/annuler/reporter ses rendez-vous
     Route::post('/patient/rendez-vous', [RendezVousController::class, 'patientCreate']);
     Route::get('/patient/rendez-vous', [RendezVousController::class, 'listForPatient']);
     Route::post('/rendez-vous/{rendez_vou}/annuler', [RendezVousController::class, 'updateStatutCancel']);
     Route::post('/rendez-vous/{rendez_vou}/reporter', [RendezVousController::class, 'reschedule']);
+
 });
