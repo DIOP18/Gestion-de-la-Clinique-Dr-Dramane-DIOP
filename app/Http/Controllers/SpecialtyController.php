@@ -12,4 +12,8 @@ class SpecialtyController extends Controller
         $specialties = Specialty::select('id', 'label', 'prix')->get();
         return response()->json($specialties);
     }
+    public function specialitesIndexass()
+    {
+        return response()->json(Specialty::orderBy('label')->get());
+    }
 }

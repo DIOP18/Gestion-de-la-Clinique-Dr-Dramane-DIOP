@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AssistantController;
 use App\Http\Controllers\DoctorController;
 use App\Http\Controllers\profilcontroller;
 use App\Http\Controllers\RendezVousController;
@@ -33,7 +34,7 @@ Route::middleware(['auth:sanctum', 'check.blocked'])->group(function () {
     });
 });
 // Récupérer les spécialités (pour le formulaire médecin)
-Route::get('/specialties', [profilcontroller::class, 'getSpecialties']);
+
 // Routes publiques
 Route::get('/availability/{availabilityId}/check', [VisitorAppointmentController::class, 'checkAvailability']);
 
@@ -106,11 +107,10 @@ Route::middleware(['auth:sanctum', 'check.blocked','role:MEDECIN'])->group(funct
 });
 
 Route::middleware(['auth:sanctum','check.blocked', 'role:ASSISTANT'])->group(function () {
+    Route::get('/assistant/specialite', [SpecialtyController::class, 'specialitesIndexass']);
+    Route::get('/assistant/global-view', [AssistantController::class, 'globalView']);
     // Assistant: créer rendez-vous pour un patient, lister ceux qu'il programme
     Route::post('/assistant/rendez-vous', [RendezVousController::class, 'assistantCreate']);
-    Route::get('/assistant/rendez-vous', [RendezVousController::class, 'listForAssistant']);
-    Route::post('/rendez-vous/{rendez_vou}/annuler', [RendezVousController::class, 'updateStatutCancel']);
-    Route::post('/rendez-vous/{rendez_vou}/reporter', [RendezVousController::class, 'reschedule']);
     // Assistant: statistiques de ses rendez-vous
     Route::get('/assistant/stats', [StatsController::class, 'assistant']);
 });
