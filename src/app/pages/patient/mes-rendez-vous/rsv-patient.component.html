@@ -1,0 +1,271 @@
+<div class="appointments-container">
+  <!-- Header -->
+  <div class="appointments-header">
+    <h1>Mes Rendez-vous</h1>
+    <button class="btn-refresh" (click)="loadAppointments()" [disabled]="isLoading">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" [class.spinning]="isLoading">
+        <path d="M21 2v6h-6"></path>
+        <path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path>
+        <path d="M3 22v-6h6"></path>
+        <path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path>
+      </svg>
+      Actualiser
+    </button>
+  </div>
+
+  <!-- Messages -->
+  <div class="alert alert-success" *ngIf="successMessage">
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+      <polyline points="22 4 12 14.01 9 11.01"></polyline>
+    </svg>
+    {{ successMessage }}
+  </div>
+  <div class="alert alert-error" *ngIf="errorMessage">
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"></circle>
+      <line x1="15" y1="9" x2="9" y2="15"></line>
+      <line x1="9" y1="9" x2="15" y2="15"></line>
+    </svg>
+    {{ errorMessage }}
+  </div>
+
+  <!-- Filtres -->
+  <div class="filters-section">
+    <div class="filter-group">
+      <label for="search">Rechercher un médecin</label>
+      <input
+        type="text"
+        id="search"
+        class="form-control"
+        placeholder="Nom du médecin..."
+        [(ngModel)]="searchTerm"
+        (input)="onSearchChange()"
+      />
+    </div>
+
+    <div class="filter-group">
+      <label for="status">Filtrer par statut</label>
+      <select
+        id="status"
+        class="form-control"
+        [(ngModel)]="filterStatus"
+        (change)="onFilterChange()"
+      >
+        <option value="all">Tous les statuts</option>
+        <option value="EN ATTENTE">En attente</option>
+        <option value="CONFIRME">Confirmé</option>
+        <option value="COMPLETE">Complété</option>
+        <option value="ANNULE">Annulé</option>
+        <option value="REPORT">Reporté</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div class="loading-container" *ngIf="isLoading">
+    <div class="spinner"></div>
+    <p>Chargement des rendez-vous...</p>
+  </div>
+
+  <!-- Tableau des rendez-vous -->
+  <div class="table-container" *ngIf="!isLoading">
+    <table class="appointments-table" *ngIf="filteredAppointments.length > 0">
+      <thead>
+      <tr>
+        <th>MÉDECIN</th>
+        <th>SPÉCIALITÉ</th>
+        <th>DATE</th>
+        <th>HEURE</th>
+        <th>MOTIF</th>
+        <th>STATUT</th>
+        <th>PAYÉ</th>
+        <th>PRIX</th>
+        <th>ACTIONS</th>
+      </tr>
+      </thead>
+      <tbody>
+      <tr *ngFor="let appointment of filteredAppointments">
+        <td class="doctor-name" data-label="Médecin">
+          <div class="doctor-info">
+            <div class="doctor-avatar">
+              {{ appointment.doctor_prenom?.charAt(0) }}{{ appointment.doctor_nom?.charAt(0) }}
+            </div>
+            <strong>Dr. {{ appointment.doctor_full_name }}</strong>
+          </div>
+        </td>
+        <td data-label="Spécialité">
+          <span class="specialty-badge">{{ appointment.specialty }}</span>
+        </td>
+        <td data-label="Date">
+          <div class="date-info">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+            {{ appointment.date }}
+          </div>
+        </td>
+        <td class="time-cell" data-label="Heure">
+          <div class="time-info">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+            {{ appointment.heure_debut }} - {{ appointment.heure_fin }}
+          </div>
+        </td>
+        <td class="motif-cell" data-label="Motif" [title]="appointment.motif">
+          {{ appointment.motif }}
+        </td>
+        <td data-label="Statut">
+            <span class="status-badge" [ngClass]="getStatusClass(appointment.statut)">
+              {{ getStatusLabel(appointment.statut) }}
+            </span>
+        </td>
+        <td class="payment-cell" data-label="Payé">
+            <span class="payment-badge" [class.paid]="appointment.est_paye">
+              <svg *ngIf="appointment.est_paye" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              <svg *ngIf="!appointment.est_paye" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+              {{ appointment.est_paye ? 'Oui' : 'Non' }}
+            </span>
+        </td>
+        <td class="price-cell" data-label="Prix">
+          <strong>{{ appointment.prix | number:'1.0-0' }} FCFA</strong>
+        </td>
+        <td class="actions-cell">
+          <div class="actions-buttons">
+            <!-- Annuler (seulement si EN ATTENTE) -->
+            <button
+              class="btn-action btn-cancel"
+              *ngIf="canCancel(appointment)"
+              (click)="cancelAppointment(appointment)"
+              title="Annuler"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+
+            <!-- Payer (seulement si CONFIRME et non payé) -->
+            <button
+              class="btn-action btn-pay"
+              *ngIf="canPay(appointment)"
+              (click)="openPaymentModal(appointment)"
+              title="Payer"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+                <line x1="1" y1="10" x2="23" y2="10"></line>
+              </svg>
+            </button>
+          </div>
+        </td>
+      </tr>
+      </tbody>
+    </table>
+
+    <!-- Message si aucun rendez-vous -->
+    <div class="no-appointments" *ngIf="filteredAppointments.length === 0">
+      <div class="no-appointments-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+          <line x1="16" y1="2" x2="16" y2="6"></line>
+          <line x1="8" y1="2" x2="8" y2="6"></line>
+          <line x1="3" y1="10" x2="21" y2="10"></line>
+        </svg>
+      </div>
+      <h3>Aucun rendez-vous trouvé</h3>
+      <p *ngIf="searchTerm || filterStatus !== 'all'">
+        Essayez de modifier vos filtres de recherche.
+      </p>
+      <p *ngIf="!searchTerm && filterStatus === 'all'">
+        Vous n'avez pas encore de rendez-vous.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de paiement -->
+<div class="modal-overlay" *ngIf="showPaymentModal" (click)="closePaymentModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>Paiement du rendez-vous</h2>
+      <button class="btn-close" (click)="closePaymentModal()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+
+    <div class="modal-body" *ngIf="selectedAppointment">
+      <div class="appointment-details">
+        <p><strong>Médecin:</strong> Dr. {{ selectedAppointment.doctor_full_name }}</p>
+        <p><strong>Date:</strong> {{ selectedAppointment.date }} à {{ selectedAppointment.heure_debut }}</p>
+        <p class="price-highlight"><strong>Montant:</strong> {{ selectedAppointment.prix | number:'1.0-0' }} FCFA</p>
+      </div>
+
+      <div class="payment-method">
+        <label>Choisissez votre méthode de paiement :</label>
+        <div class="payment-options">
+          <label class="payment-option">
+            <input type="radio" name="payment" value="ESPECES" [(ngModel)]="paymentMethod">
+            <span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="1" x2="12" y2="23"></line>
+                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+              </svg>
+              Espèces
+            </span>
+          </label>
+
+          <label class="payment-option">
+            <input type="radio" name="payment" value="CARTE" [(ngModel)]="paymentMethod">
+            <span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+                <line x1="1" y1="10" x2="23" y2="10"></line>
+              </svg>
+              Carte bancaire
+            </span>
+          </label>
+
+          <label class="payment-option">
+            <input type="radio" name="payment" value="MOBILE_MONEY" [(ngModel)]="paymentMethod">
+            <span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+                <line x1="12" y1="18" x2="12.01" y2="18"></line>
+              </svg>
+              Mobile Money
+            </span>
+          </label>
+
+          <label class="payment-option">
+            <input type="radio" name="payment" value="VIREMENT" [(ngModel)]="paymentMethod">
+            <span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+              </svg>
+              Virement
+            </span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-secondary" (click)="closePaymentModal()">Annuler</button>
+      <button class="btn-primary" (click)="confirmPayment()">Confirmer le paiement</button>
+    </div>
+  </div>
+</div>

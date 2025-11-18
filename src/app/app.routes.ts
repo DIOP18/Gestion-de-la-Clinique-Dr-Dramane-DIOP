@@ -63,6 +63,10 @@ export const routes: Routes = [
         path: 'disponibilites',
         loadComponent: () => import('./pages/medecin/disponibilites/disponibilites.component').then(m => m.DisponibilitesComponent)
       },
+      {
+        path:'mes-rendez-vous',
+        loadComponent: () =>import('./pages/medecin/rendez-vous/rsv-docteur.component').then(m=>m.RsvDocteurComponent)
+      }
     ]
   },
 
@@ -95,7 +99,7 @@ export const routes: Routes = [
       },
       {
         path: 'mes-rendez-vous',
-        loadComponent:()=>import('./pages/patient/rendez-vous/rendez-vous.component').then(m => m.RendezVousComponent)
+        loadComponent:()=>import('./pages/patient/mes-rendez-vous/rsv-patient.component').then(m => m.RsvPatientComponent)
       },
       {
         path: 'calendar',
