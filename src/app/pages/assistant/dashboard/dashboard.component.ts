@@ -9,10 +9,7 @@ import { User } from '../../../models/auth.model';
   imports: [CommonModule],
   template: `
     <div class="dashboard-container">
-      <div class="dashboard-header">
-        <h1>Dashboard Assistant</h1>
-        <button class="btn btn-danger" (click)="logout()">Déconnexion</button>
-      </div>
+
       <div class="dashboard-content" *ngIf="user">
         <div class="welcome-card">
           <img [src]="getImageUrl(user.image)" alt="Profile" class="profile-image">

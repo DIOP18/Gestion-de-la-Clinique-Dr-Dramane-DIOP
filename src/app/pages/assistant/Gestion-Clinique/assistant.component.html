@@ -1,0 +1,430 @@
+<div class="dashboard-container">
+  <!-- Loading Overlay -->
+  <div *ngIf="loading" class="loading-overlay">
+    <div class="spinner"></div>
+    <p>Chargement des données...</p>
+    <small style="margin-top: 0.5rem; opacity: 0.8;">Disponibilités et rendez-vous</small>
+  </div>
+
+  <!-- Header -->
+  <div class="dashboard-header">
+    <div class="header-content">
+      <h1>Vue Globale Clinique</h1>
+      <p>Gestion des disponibilités et rendez-vous</p>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="stats-cards">
+      <div class="stat-card disponibilites">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+          <line x1="16" y1="2" x2="16" y2="6"/>
+          <line x1="8" y1="2" x2="8" y2="6"/>
+          <line x1="3" y1="10" x2="21" y2="10"/>
+        </svg>
+        <div class="stat-info">
+          <span class="stat-value">{{ stats.total_disponibilites }}</span>
+          <span class="stat-label">Disponibilités</span>
+        </div>
+      </div>
+
+      <div class="stat-card rendez-vous">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+          <circle cx="8.5" cy="7" r="4"/>
+          <line x1="20" y1="8" x2="20" y2="14"/>
+          <line x1="23" y1="11" x2="17" y2="11"/>
+        </svg>
+        <div class="stat-info">
+          <span class="stat-value">{{ stats.total_rendez_vous }}</span>
+          <span class="stat-label">Rendez-vous confirmés</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filtres -->
+  <div class="filters-section">
+    <div class="filter-group">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <circle cx="11" cy="11" r="8"/>
+        <path d="m21 21-4.35-4.35"/>
+      </svg>
+      <input
+        type="text"
+        placeholder="Rechercher médecin ou patient..."
+        [(ngModel)]="filters.searchDoctor"
+        (ngModelChange)="applyFilters()"
+        class="filter-input"
+      />
+    </div>
+
+    <div class="filter-group">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+      </svg>
+      <select
+        [(ngModel)]="filters.selectedSpecialty"
+        (ngModelChange)="applyFilters()"
+        class="filter-select"
+      >
+        <option value="" disabled>Choisir une spécialité</option>
+        <option *ngFor="let specialty of specialties" [value]="specialty.label">
+          {{ specialty.label }}
+        </option>
+      </select>
+    </div>
+
+    <div class="filter-group">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+        <line x1="16" y1="2" x2="16" y2="6"/>
+        <line x1="8" y1="2" x2="8" y2="6"/>
+        <line x1="3" y1="10" x2="21" y2="10"/>
+      </svg>
+      <input
+        type="date"
+        [(ngModel)]="filters.selectedDate"
+        (ngModelChange)="applyFilters()"
+        class="filter-input"
+      />
+    </div>
+
+    <button class="btn-reset" (click)="resetFilters()">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <polyline points="23 4 23 10 17 10"/>
+        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+      </svg>
+      Réinitialiser
+    </button>
+  </div>
+
+  <!-- Onglets -->
+  <div class="tabs-container">
+    <button
+      class="tab-btn"
+      [class.active]="activeTab === 'disponibilites'"
+      (click)="switchTab('disponibilites')"
+    >
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+        <line x1="16" y1="2" x2="16" y2="6"/>
+        <line x1="8" y1="2" x2="8" y2="6"/>
+        <line x1="3" y1="10" x2="21" y2="10"/>
+      </svg>
+      Disponibilités ({{ filteredDisponibilites.length }})
+    </button>
+
+    <button
+      class="tab-btn"
+      [class.active]="activeTab === 'rendez-vous'"
+      (click)="switchTab('rendez-vous')"
+    >
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+        <circle cx="9" cy="7" r="4"/>
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+      </svg>
+      Rendez-vous ({{ filteredRendezVous.length }})
+    </button>
+  </div>
+
+  <!-- Contenu des onglets -->
+  <div class="tab-content">
+    <!-- Onglet Disponibilités (Tableau) -->
+    <div *ngIf="activeTab === 'disponibilites'" class="disponibilites-table-wrapper">
+      <div *ngIf="filteredDisponibilites.length === 0" class="empty-state">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <h3>Aucune disponibilité trouvée</h3>
+        <p>Aucune disponibilité ne correspond à vos critères de recherche.</p>
+      </div>
+
+      <table *ngIf="filteredDisponibilites.length > 0" class="disponibilites-table">
+        <thead>
+        <tr>
+          <th>Médecin</th>
+          <th>Spécialité</th>
+          <th>Date</th>
+          <th>Heure début</th>
+          <th>Heure fin</th>
+          <th>Durée consultation</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr *ngFor="let dispo of filteredDisponibilites">
+          <td>
+            <div class="doctor-cell">
+              <div class="doctor-avatar">{{ dispo.doctor_name.charAt(4) }}</div>
+              <span>{{ dispo.doctor_name }}</span>
+            </div>
+          </td>
+          <td>
+            <span class="specialty-badge">{{ dispo.specialty }}</span>
+          </td>
+          <td>{{ dispo.date }}</td>
+          <td>{{ dispo.heure_debut }}</td>
+          <td>{{ dispo.heure_fin }}</td>
+          <td>{{ dispo.duree_consultation }} min</td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Onglet Rendez-vous (Cards) -->
+    <!-- Onglet Rendez-vous (Tableau) -->
+    <div *ngIf="activeTab === 'rendez-vous'" class="rendez-vous-table-wrapper">
+      <div *ngIf="filteredRendezVous.length === 0" class="empty-state">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <h3>Aucun rendez-vous trouvé</h3>
+        <p>Aucun rendez-vous confirmé ne correspond à vos critères.</p>
+      </div>
+
+      <table *ngIf="filteredRendezVous.length > 0" class="rendez-vous-table">
+        <thead>
+        <tr>
+          <th>Date</th>
+          <th>Médecin</th>
+          <th>Spécialité</th>
+          <th>Patient</th>
+          <th>Horaire</th>
+          <th>Motif</th>
+          <th>Paiement</th>
+          <th>Action</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr *ngFor="let rdv of filteredRendezVous">
+          <td>
+            <div class="date-cell">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8" y1="2" x2="8" y2="6"/>
+                <line x1="3" y1="10" x2="21" y2="10"/>
+              </svg>
+              <span>{{ rdv.date }}</span>
+            </div>
+          </td>
+          <td>
+            <div class="doctor-cell">
+              <div class="doctor-avatar">{{ rdv.doctor_name.charAt(4) }}</div>
+              <span>{{ rdv.doctor_name }}</span>
+            </div>
+          </td>
+          <td>
+            <span class="specialty-badge">{{ rdv.specialty }}</span>
+          </td>
+          <td>
+            <div class="patient-cell">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="8.5" cy="7" r="4"/>
+              </svg>
+              <span>{{ rdv.patient_name }}</span>
+            </div>
+          </td>
+          <td>
+            <div class="time-cell">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+              </svg>
+              <span>{{ rdv.heure_debut }} - {{ rdv.heure_fin }}</span>
+            </div>
+          </td>
+          <td>
+            <span class="motif-text">{{ rdv.motif }}</span>
+          </td>
+          <td>
+            <div class="payment-cell">
+                <span class="payment-badge" [class.paid]="rdv.est_paye" [class.unpaid]="!rdv.est_paye">
+                  {{ rdv.est_paye ? 'Payé' : 'Non payé' }}
+                </span>
+              <span class="price">{{ rdv.prix }} FCFA</span>
+            </div>
+          </td>
+          <td>
+            <button class="btn-view" (click)="openDetailsModal(rdv)">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+              Voir
+            </button>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+
+<!-- Modal Détails Rendez-vous -->
+<div *ngIf="showDetailsModal && selectedRendezVous" class="modal-overlay" (click)="closeDetailsModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>Détails du rendez-vous</h3>
+      <button class="btn-close" (click)="closeDetailsModal()">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <div class="detail-section">
+        <h4>Informations générales</h4>
+        <div class="detail-grid">
+          <div class="detail-item">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/>
+              <line x1="8" y1="2" x2="8" y2="6"/>
+              <line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+            <div>
+              <span class="detail-label">Date</span>
+              <span class="detail-value">{{ selectedRendezVous?.date }}</span>
+            </div>
+          </div>
+
+          <div class="detail-item">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+            <div>
+              <span class="detail-label">Horaire</span>
+              <span class="detail-value">{{ selectedRendezVous?.heure_debut }} - {{ selectedRendezVous?.heure_fin }}</span>
+            </div>
+          </div>
+
+          <div class="detail-item">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+            </svg>
+            <div>
+              <span class="detail-label">Statut</span>
+              <span class="detail-value status-badge">{{ selectedRendezVous?.statut }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="detail-section">
+        <h4>Médecin</h4>
+        <div class="detail-grid">
+          <div class="detail-item full-width">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>
+            <div>
+              <span class="detail-label">Nom complet</span>
+              <span class="detail-value">{{ selectedRendezVous?.doctor_name }}</span>
+              <span class="specialty-badge-modal">{{ selectedRendezVous?.specialty }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="detail-section">
+        <h4>Patient</h4>
+        <div class="detail-grid">
+          <div class="detail-item">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="8.5" cy="7" r="4"/>
+            </svg>
+            <div>
+              <span class="detail-label">Nom complet</span>
+              <span class="detail-value">{{ selectedRendezVous?.patient_name }}</span>
+            </div>
+          </div>
+
+          <div class="detail-item">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+            </svg>
+            <div>
+              <span class="detail-label">Téléphone</span>
+              <span class="detail-value">{{ selectedRendezVous?.patient_phone }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="detail-section">
+        <h4>Consultation</h4>
+        <div class="motif-box">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+            <polyline points="10 9 9 9 8 9"/>
+          </svg>
+          <div>
+            <span class="detail-label">Motif de consultation</span>
+            <p class="motif-content">{{ selectedRendezVous?.motif }}</p>
+          </div>
+        </div>
+
+        <div *ngIf="selectedRendezVous.note_medecin" class="note-box">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+          </svg>
+          <div>
+            <span class="detail-label">Note du médecin</span>
+            <p class="note-content">{{ selectedRendezVous?.note_medecin }}</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="detail-section">
+        <h4>Paiement</h4>
+        <div class="payment-details">
+          <div class="payment-row">
+            <span class="payment-label">Montant :</span>
+            <span class="payment-amount">{{ selectedRendezVous?.prix }} FCFA</span>
+          </div>
+          <div class="payment-row">
+            <span class="payment-label">Statut :</span>
+            <span class="payment-status" [class.paid]="selectedRendezVous?.est_paye" [class.unpaid]="!selectedRendezVous?.est_paye">
+              {{ selectedRendezVous?.est_paye ? 'Payé' : 'Non payé' }}
+            </span>
+          </div>
+          <div class="payment-row" *ngIf="selectedRendezVous.paye_par && selectedRendezVous.paye_par !== 'N/A'">
+            <span class="payment-label">Méthode :</span>
+            <span class="payment-method">{{ selectedRendezVous?.paye_par }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div *ngIf="selectedRendezVous.cree_par_type" class="created-by-info">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M12 16v-4"/>
+          <path d="M12 8h.01"/>
+        </svg>
+        <span>Rendez-vous créé par : <strong>{{ selectedRendezVous?.cree_par_type }}</strong></span>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-secondary" (click)="closeDetailsModal()">Fermer</button>
+    </div>
+  </div>
+</div>

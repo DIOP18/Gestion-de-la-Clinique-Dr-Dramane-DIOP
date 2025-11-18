@@ -6,6 +6,7 @@ import {NavbarComponent} from './pages/admin/navbar/navbar.component';
 import {NavbarmedecinComponent} from './pages/medecin/navbar/navbarmedecin.component';
 import {NavbarPatComponent} from './pages/patient/navbar/navbarPat.component';
 import {CalendarComponent} from './pages/calendar/calendar.component';
+import {NavbarAssComponent} from './pages/assistant/navbar/navbarAss.component';
 
 export const routes: Routes = [
   {
@@ -73,6 +74,7 @@ export const routes: Routes = [
   // Routes protégées - ASSISTANT
   {
     path: 'assistant',
+    component: NavbarAssComponent,
     canActivate: [AuthGuard, RoleGuard],
     data: { roles: ['ASSISTANT'] },
     children: [
@@ -81,6 +83,10 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/assistant/dashboard/dashboard.component').then(m => m.DashboardComponent)
 
       },
+      {
+        path: 'Gestions',
+        loadComponent:()=> import('./pages/assistant/Gestion-Clinique/assistant.component').then(m=>m.AssistantComponent)
+      }
     ]
   },
 
