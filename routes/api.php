@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\DoctorController;
+use App\Http\Controllers\profilcontroller;
 use App\Http\Controllers\RendezVousController;
 use App\Http\Controllers\SpecialtyController;
 use App\Http\Controllers\VisitorAppointmentController;
@@ -31,6 +32,8 @@ Route::middleware(['auth:sanctum', 'check.blocked'])->group(function () {
         return $request->user();
     });
 });
+// Récupérer les spécialités (pour le formulaire médecin)
+Route::get('/specialties', [profilcontroller::class, 'getSpecialties']);
 // Routes publiques
 Route::get('/availability/{availabilityId}/check', [VisitorAppointmentController::class, 'checkAvailability']);
 
@@ -93,15 +96,11 @@ Route::middleware(['auth:sanctum', 'check.blocked','role:MEDECIN'])->group(funct
     Route::post('/medecin/disponibilites', [DisponibiliteController::class, 'store']);
     Route::put('/medecin/disponibilites/{disponibilite}', [DisponibiliteController::class, 'update']);
     Route::delete('/medecin/disponibilites/{disponibilite}', [DisponibiliteController::class, 'destroy']);
+    Route::get('/appointments', [DoctorController::class, 'getAppointments']);
+    Route::put('/appointments/{id}/confirm', [DoctorController::class, 'confirmAppointment']);
+    Route::put('/appointments/{id}/cancel', [DoctorController::class, 'cancelAppointment']);
 
-    // Médecin: lister ses rendez-vous
-    Route::get('/medecin/rendez-vous', [RendezVousController::class, 'listForDoctor']);
 
-    // Médecin: actions statut
-    Route::post('/rendez-vous/{rendez_vou}/confirmer', [RendezVousController::class, 'updateStatutConfirm']);
-    Route::post('/rendez-vous/{rendez_vou}/annuler', [RendezVousController::class, 'updateStatutCancel']);
-    Route::post('/rendez-vous/{rendez_vou}/terminer', [RendezVousController::class, 'updateStatutComplete']);
-    Route::post('/rendez-vous/{rendez_vou}/reporter', [RendezVousController::class, 'reschedule']);
     // Médecin: statistiques personnelles
     Route::get('/medecin/stats', [StatsController::class, 'doctor']);
 });
@@ -117,12 +116,9 @@ Route::middleware(['auth:sanctum','check.blocked', 'role:ASSISTANT'])->group(fun
 });
 
 Route::middleware(['auth:sanctum', 'role:PATIENT'])->group(function () {
-
-
-    // Patient: créer/lister/annuler/reporter ses rendez-vous
     Route::post('/patient/rendez-vous', [RendezVousController::class, 'patientCreate']);
-    Route::get('/patient/rendez-vous', [RendezVousController::class, 'listForPatient']);
-    Route::post('/rendez-vous/{rendez_vou}/annuler', [RendezVousController::class, 'updateStatutCancel']);
-    Route::post('/rendez-vous/{rendez_vou}/reporter', [RendezVousController::class, 'reschedule']);
+    Route::get('/patient/appointments', [RendezVousController::class, 'getAppointments']);
+    Route::put('/patient/appointments/{id}/cancel', [RendezVousController::class, 'cancelAppointment']);
+    Route::post('/patient/appointments/{id}/pay', [RendezVousController::class, 'payAppointment']);
 
 });
