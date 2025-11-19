@@ -1,0 +1,149 @@
+<div class="profile-page">
+
+  <!-- Messages -->
+  <div class="alert alert-success" *ngIf="successMessage">
+    {{ successMessage }}
+  </div>
+
+  <div class="alert alert-error" *ngIf="errorMessage">
+    {{ errorMessage }}
+  </div>
+
+  <!-- Loading -->
+  <div class="loading" *ngIf="loading">
+    <div class="spinner"></div>
+    <p>Chargement du profil...</p>
+  </div>
+
+  <!-- Contenu principal -->
+  <div class="profile-container" *ngIf="!loading">
+
+    <!-- Header avec avatar -->
+    <div class="profile-header">
+      <div class="avatar-section">
+        <div class="avatar-wrapper">
+          <img [src]="getImageUrl(user.image)" alt="Photo de profil" class="avatar">
+          <label class="avatar-upload">
+            <input type="file" accept="image/*" (change)="onAvatarSelected($event)" hidden>
+            <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+          </label>
+        </div>
+      </div>
+
+      <div class="user-info">
+        <h1>{{ user.first_name }} {{ user.last_name }}</h1>
+        <p class="email">{{ user.email }}</p>
+        <span class="role-badge">{{ user.role }}</span>
+      </div>
+    </div>
+
+    <!-- Carte Informations personnelles -->
+    <div class="card">
+      <div class="card-header">
+        <h2>Informations personnelles</h2>
+        <button *ngIf="!isEditing" class="btn-edit" (click)="enableEdit()">
+          <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+          </svg>
+          Modifier
+        </button>
+      </div>
+
+      <div class="card-body">
+        <div class="info-grid">
+
+          <div class="info-item">
+            <label>Prénom</label>
+            <input *ngIf="isEditing" type="text" [(ngModel)]="user.first_name" class="input">
+            <div *ngIf="!isEditing" class="value">{{ user.first_name || '-' }}</div>
+          </div>
+
+          <div class="info-item">
+            <label>Nom</label>
+            <input *ngIf="isEditing" type="text" [(ngModel)]="user.last_name" class="input">
+            <div *ngIf="!isEditing" class="value">{{ user.last_name || '-' }}</div>
+          </div>
+
+          <div class="info-item">
+            <label>Téléphone</label>
+            <input *ngIf="isEditing" type="tel" [(ngModel)]="user.phone" class="input">
+            <div *ngIf="!isEditing" class="value">{{ user.phone || '-' }}</div>
+          </div>
+
+          <div class="info-item">
+            <label>Genre</label>
+            <select *ngIf="isEditing" [(ngModel)]="user.gender" class="input">
+              <option value="M">Masculin</option>
+              <option value="F">Féminin</option>
+              <option value="O">Autre</option>
+            </select>
+            <div *ngIf="!isEditing" class="value">
+              {{ user.gender === 'M' ? 'Masculin' : user.gender === 'F' ? 'Féminin' : 'Autre' }}
+            </div>
+          </div>
+
+          <div class="info-item full-width">
+            <label>Adresse</label>
+            <input *ngIf="isEditing" type="text" [(ngModel)]="user.address" class="input">
+            <div *ngIf="!isEditing" class="value">{{ user.address || '-' }}</div>
+          </div>
+
+        </div>
+
+        <div class="actions" *ngIf="isEditing">
+          <button class="btn-cancel" (click)="cancelEdit()" [disabled]="saving">
+            Annuler
+          </button>
+          <button class="btn-save" (click)="saveProfile()" [disabled]="saving">
+            <span *ngIf="saving" class="btn-spinner"></span>
+            {{ saving ? 'Enregistrement...' : 'Enregistrer' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Carte Sécurité -->
+    <div class="card">
+      <div class="card-header">
+        <h2>Sécurité</h2>
+        <button class="btn-edit" (click)="showPasswordSection = !showPasswordSection">
+          <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+          </svg>
+          {{ showPasswordSection ? 'Annuler' : 'Changer le mot de passe' }}
+        </button>
+      </div>
+
+      <div class="card-body" *ngIf="showPasswordSection">
+        <div class="info-grid">
+
+          <div class="info-item full-width">
+            <label>Mot de passe actuel</label>
+            <input type="password" [(ngModel)]="passwordData.current_password" class="input" placeholder="••••••••">
+          </div>
+
+          <div class="info-item full-width">
+            <label>Nouveau mot de passe</label>
+            <input type="password" [(ngModel)]="passwordData.new_password" class="input" placeholder="••••••••">
+            <small>Au moins 8 caractères</small>
+          </div>
+
+        </div>
+
+        <div class="actions">
+          <button class="btn-cancel" (click)="showPasswordSection = false; passwordData = {current_password: '', new_password: ''}">
+            Annuler
+          </button>
+          <button class="btn-save" (click)="changePassword()" [disabled]="saving">
+            <span *ngIf="saving" class="btn-spinner"></span>
+            {{ saving ? 'Modification...' : 'Modifier le mot de passe' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>

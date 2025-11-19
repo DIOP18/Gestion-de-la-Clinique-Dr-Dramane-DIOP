@@ -68,6 +68,11 @@ export const routes: Routes = [
         path:'mes-rendez-vous',
         loadComponent: () =>import('./pages/medecin/rendez-vous/rsv-docteur.component').then(m=>m.RsvDocteurComponent)
       }
+      ,
+      {
+        path:'profile',
+        loadComponent: () =>import('./pages/profile/profile.component').then(m=>m.ProfileComponent)
+      }
     ]
   },
 
@@ -86,6 +91,10 @@ export const routes: Routes = [
       {
         path: 'Gestions',
         loadComponent:()=> import('./pages/assistant/Gestion-Clinique/assistant.component').then(m=>m.AssistantComponent)
+      },
+      {
+        path:'profile',
+        loadComponent: () =>import('./pages/profile/profile.component').then(m=>m.ProfileComponent)
       }
     ]
   },
@@ -110,6 +119,10 @@ export const routes: Routes = [
       {
         path: 'calendar',
         loadComponent: () => import('./pages/patient/calendar/calendar.component').then(m => m.CalendarComponent)
+      },
+      {
+        path:'profile',
+        loadComponent: () =>import('./pages/profile/profile.component').then(m=>m.ProfileComponent)
       }
     ]
   },
