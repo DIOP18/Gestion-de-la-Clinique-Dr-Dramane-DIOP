@@ -3,6 +3,7 @@
 use App\Http\Controllers\AssistantController;
 use App\Http\Controllers\DoctorController;
 use App\Http\Controllers\profilcontroller;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RendezVousController;
 use App\Http\Controllers\SpecialtyController;
 use App\Http\Controllers\VisitorAppointmentController;
@@ -35,6 +36,16 @@ Route::middleware(['auth:sanctum', 'check.blocked'])->group(function () {
 });
 // Récupérer les spécialités (pour le formulaire médecin)
 
+// Dans routes/api.php
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/profile', [ProfileController::class, 'me']);
+    Route::post('/profile/update', [ProfileController::class, 'update']);
+    Route::post('/profile/update-avatar', [ProfileController::class, 'updateAvatar']);
+    Route::post('/profile/update-password', [ProfileController::class, 'updatePassword']);
+});
+
+// Modifier le mot de passe
+Route::post('/profile/update-password', [ProfileController::class, 'updatePassword']);
 // Routes publiques
 Route::get('/availability/{availabilityId}/check', [VisitorAppointmentController::class, 'checkAvailability']);
 
@@ -113,6 +124,7 @@ Route::middleware(['auth:sanctum','check.blocked', 'role:ASSISTANT'])->group(fun
     Route::post('/assistant/rendez-vous', [RendezVousController::class, 'assistantCreate']);
     // Assistant: statistiques de ses rendez-vous
     Route::get('/assistant/stats', [StatsController::class, 'assistant']);
+
 });
 
 Route::middleware(['auth:sanctum', 'role:PATIENT'])->group(function () {

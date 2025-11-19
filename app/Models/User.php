@@ -52,4 +52,18 @@ class User extends Authenticatable
         'two_factor_secret' => 'encrypted',
         'two_factor_recovery_codes' => 'encrypted',
     ];
+    public function doctor()
+    {
+        return $this->hasOne(Doctor::class);
+    }
+
+    public function assistant()
+    {
+        return $this->hasOne(Assistant::class);
+    }
+
+    public function patient()
+    {
+        return $this->hasOne(Patient::class);
+    }
 }
