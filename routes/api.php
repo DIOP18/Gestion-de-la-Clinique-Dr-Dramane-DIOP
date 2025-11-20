@@ -43,15 +43,19 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/profile/update-avatar', [ProfileController::class, 'updateAvatar']);
     Route::post('/profile/update-password', [ProfileController::class, 'updatePassword']);
 });
-
-// Modifier le mot de passe
-Route::post('/profile/update-password', [ProfileController::class, 'updatePassword']);
-// Routes publiques
 Route::get('/availability/{availabilityId}/check', [VisitorAppointmentController::class, 'checkAvailability']);
+Route::middleware('auth:sanctum')->group(function () {
 
-// Routes protégées (nécessitent authentification)
-Route::middleware(['auth:sanctum', 'check.blocked'])->group(function () {
+    // NOUVELLE ROUTE : Vérifier l'authentification de l'utilisateur
+    Route::get('/auth/verify', [VisitorAppointmentController::class, 'verifyAuth']);
+
+    // Création de rendez-vous par un visiteur authentifié
     Route::post('/visitor/appointments', [VisitorAppointmentController::class, 'createFromVisitor']);
+
+    // Autres routes protégées...
+    Route::get('/user', function (Request $request) {
+        return $request->user();
+    });
 });
 
 // Public endpoints (visitors can browse available doctors and slots)

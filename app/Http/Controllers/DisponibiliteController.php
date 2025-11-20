@@ -71,22 +71,31 @@ class DisponibiliteController extends Controller
     }
     public function getByDoctor($doctorId, Request $request)
     {
-        // Récupérer le mois et l'année depuis les paramètres (optionnel)
         $month = $request->input('month', now()->month);
         $year = $request->input('year', now()->year);
 
         $startDate = Carbon::create($year, $month, 1)->startOfMonth();
         $endDate = Carbon::create($year, $month, 1)->endOfMonth();
 
+        $now = now(); // Date et heure actuelles
+
         $disponibilites = Availability::where('doctor_id', $doctorId)
             ->whereBetween('date', [$startDate, $endDate])
-            ->whereDoesntHave('appointment') // Seulement les créneaux non réservés
+            ->whereDoesntHave('appointment')
+            ->where(function ($query) use ($now) {
+                // Date future
+                $query->where('date', '>', $now->toDateString())
+                    // OU aujourd'hui mais heure future
+                    ->orWhere(function ($q) use ($now) {
+                        $q->where('date', '=', $now->toDateString())
+                            ->where('heure_debut', '>', $now->toTimeString());
+                    });
+            })
             ->orderBy('date')
             ->orderBy('heure_debut')
             ->get()
             ->map(function ($dispo) {
                 $dateStr = $dispo->date->format('Y-m-d');
-
                 return [
                     'id' => $dispo->id,
                     'title' => $dispo->heure_debut . ' - ' . $dispo->heure_fin,
@@ -105,7 +114,6 @@ class DisponibiliteController extends Controller
             });
 
         return response()->json($disponibilites);
-    }
-}
+    }}
 
 
