@@ -30,6 +30,9 @@ export class CalendarComponent implements OnInit {
   motif = '';
   isSubmitting = false;
 
+  // État d'authentification
+  isCheckingAuth = false;
+
   calendarOptions: CalendarOptions = {
     plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
     initialView: 'dayGridMonth',
@@ -84,39 +87,67 @@ export class CalendarComponent implements OnInit {
   }
 
   /**
-   * Gère le retour après login/inscription
+   * CORRIGÉ : Gère le retour après login/inscription avec vérification du token
    */
   private handleReturnFromAuth(): void {
     const pendingSlotId = sessionStorage.getItem('pending_slot_id');
 
-    if (pendingSlotId && this.homeService.isAuthenticated()) {
-      const slotData = sessionStorage.getItem('pending_slot_data');
+    if (pendingSlotId) {
+      // Vérifier que l'utilisateur EST VRAIMENT authentifié avec un token valide
+      this.isCheckingAuth = true;
 
-      if (slotData) {
-        this.selectedSlot = JSON.parse(slotData);
+      this.homeService.verifyToken().subscribe({
+        next: (authResponse) => {
+          console.log('Utilisateur authentifié:', authResponse.user);
 
-        // Vérifier que le créneau est toujours disponible
-        this.homeService.checkAvailability(parseInt(pendingSlotId)).subscribe({
-          next: (response) => {
-            if (response.available) {
-              // Créneau toujours dispo, ouvrir modal motif
-              this.showMotifModal = true;
-            } else {
-              alert('Désolé, ce créneau a été réservé entre temps.');
-              this.loadDisponibilites(); // Recharger
-            }
-          },
-          error: (err) => {
-            console.error('Erreur vérification disponibilité:', err);
-            alert('Erreur lors de la vérification du créneau.');
-          },
-          complete: () => {
-            // Nettoyer le storage
-            sessionStorage.removeItem('pending_slot_id');
-            sessionStorage.removeItem('pending_slot_data');
+          const slotData = sessionStorage.getItem('pending_slot_data');
+
+          if (slotData) {
+            this.selectedSlot = JSON.parse(slotData);
+
+            // Vérifier que le créneau est toujours disponible
+            this.homeService.checkAvailability(parseInt(pendingSlotId)).subscribe({
+              next: (response) => {
+                this.isCheckingAuth = false;
+
+                if (response.available) {
+                  // Créneau toujours disponible, ouvrir directement le modal motif
+                  // (On saute le modal de confirmation car l'utilisateur l'a déjà vu)
+                  this.showMotifModal = true;
+                } else {
+                  alert('Désolé, ce créneau a été réservé entre temps.');
+                  this.loadDisponibilites();
+                }
+              },
+              error: (err) => {
+                this.isCheckingAuth = false;
+                console.error('Erreur vérification disponibilité:', err);
+                alert('Erreur lors de la vérification du créneau.');
+              },
+              complete: () => {
+                // Nettoyer le storage
+                sessionStorage.removeItem('pending_slot_id');
+                sessionStorage.removeItem('pending_slot_data');
+              }
+            });
           }
-        });
-      }
+        },
+        error: (err) => {
+          this.isCheckingAuth = false;
+          console.error('Token invalide ou expiré:', err);
+
+          // Token invalide, redemander connexion
+          alert('Votre session a expiré. Veuillez vous reconnecter.');
+
+          // Garder les données pour après la nouvelle connexion
+          this.router.navigate(['/auth/login'], {
+            queryParams: {
+              returnUrl: this.router.url,
+              message: 'Votre session a expiré. Veuillez vous reconnecter.'
+            }
+          });
+        }
+      });
     }
   }
 
@@ -169,27 +200,35 @@ export class CalendarComponent implements OnInit {
     this.selectedSlot = null;
   }
 
+  /**
+   * CORRIGÉ : Confirmation de réservation avec vérification systématique de l'authentification
+   */
   confirmBooking(): void {
-    // Vérifier si l'utilisateur est authentifié
-    if (!this.homeService.isAuthenticated()) {
-      // Sauvegarder le créneau sélectionné
-      sessionStorage.setItem('pending_slot_id', this.selectedSlot.id);
-      sessionStorage.setItem('pending_slot_data', JSON.stringify(this.selectedSlot));
+    // TOUJOURS vérifier l'authentification en temps réel avant de procéder
+    this.isCheckingAuth = true;
 
-      this.closeConfirmModal();
+    this.homeService.verifyToken().subscribe({
+      next: (authResponse) => {
+        console.log('Utilisateur vérifié:', authResponse.user);
+        this.isCheckingAuth = false;
 
-      // Rediriger vers login avec returnUrl
-      const currentUrl = this.router.url;
-      this.router.navigate(['/login'], {
-        queryParams: {
-          returnUrl: currentUrl,
-          message: 'Veuillez vous connecter ou créer un compte pour confirmer votre rendez-vous'
-        }
-      });
-      return;
-    }
+        // Token valide, continuer la réservation
+        this.proceedWithBooking();
+      },
+      error: (err) => {
+        this.isCheckingAuth = false;
+        console.error('Authentification échouée:', err);
 
-    // Si déjà authentifié, vérifier la disponibilité puis ouvrir modal motif
+        // Token invalide, expiré ou absent : rediriger vers login
+        this.redirectToLogin();
+      }
+    });
+  }
+
+  /**
+   * NOUVEAU : Procéder à la vérification du créneau puis ouvrir modal motif
+   */
+  private proceedWithBooking(): void {
     this.isLoading = true;
 
     this.homeService.checkAvailability(parseInt(this.selectedSlot.id)).subscribe({
@@ -197,6 +236,7 @@ export class CalendarComponent implements OnInit {
         this.isLoading = false;
 
         if (response.available) {
+          // Fermer modal confirmation, ouvrir modal motif
           this.showConfirmModal = false;
           this.showMotifModal = true;
         } else {
@@ -213,12 +253,35 @@ export class CalendarComponent implements OnInit {
     });
   }
 
+  /**
+   * NOUVEAU : Rediriger vers login en sauvegardant le contexte
+   */
+  private redirectToLogin(): void {
+    // Sauvegarder le créneau sélectionné
+    sessionStorage.setItem('pending_slot_id', this.selectedSlot.id);
+    sessionStorage.setItem('pending_slot_data', JSON.stringify(this.selectedSlot));
+
+    this.closeConfirmModal();
+
+    // Rediriger vers login avec returnUrl
+    const currentUrl = this.router.url;
+    this.router.navigate(['/auth/login'], {
+      queryParams: {
+        returnUrl: currentUrl,
+        message: 'Veuillez vous connecter ou créer un compte pour confirmer votre rendez-vous'
+      }
+    });
+  }
+
   closeMotifModal(): void {
     this.showMotifModal = false;
     this.motif = '';
-    this.selectedSlot = null;
+    // Ne pas réinitialiser selectedSlot ici pour garder les infos si besoin
   }
 
+  /**
+   * CORRIGÉ : Soumission du rendez-vous avec gestion d'erreurs améliorée
+   */
   submitAppointment(): void {
     if (!this.motif.trim()) {
       alert('Veuillez saisir le motif de votre rendez-vous');
@@ -235,27 +298,48 @@ export class CalendarComponent implements OnInit {
     this.homeService.createVisitorAppointment(appointmentData).subscribe({
       next: (response) => {
         this.isSubmitting = false;
-        alert('✅ Rendez-vous créé avec succès !\n\nVous recevrez une confirmation par email.');
+
+        console.log('Rendez-vous créé:', response);
+
+        // Message de succès personnalisé
+        alert(`✅ Rendez-vous confirmé avec succès !\n\nDr ${this.doctorName}\n${this.formatDate(this.selectedSlot.start)} à ${this.formatTime(this.selectedSlot.start)}`);
+
+        // Nettoyer
         this.closeMotifModal();
-        this.loadDisponibilites(); // Recharger pour masquer le créneau réservé
+        this.selectedSlot = null;
+
+        // Rediriger vers le dashboard patient
+        this.router.navigate(['/patient/mes-rendez-vous']);
       },
       error: (err) => {
         this.isSubmitting = false;
         console.error('Erreur création RDV:', err);
 
         if (err.status === 409) {
+          // Créneau déjà pris
           alert('❌ Désolé, ce créneau vient d\'être réservé par un autre patient.');
           this.closeMotifModal();
           this.loadDisponibilites();
         } else if (err.status === 401) {
-          alert('🔒 Votre session a expiré. Veuillez vous reconnecter.');
+          // Session expirée
+          alert('⚠️ Votre session a expiré. Veuillez vous reconnecter.');
           sessionStorage.setItem('pending_slot_id', this.selectedSlot.id);
           sessionStorage.setItem('pending_slot_data', JSON.stringify(this.selectedSlot));
-          this.router.navigate(['/login'], {
+          this.router.navigate(['/auth/login'], {
             queryParams: { returnUrl: this.router.url }
           });
+        } else if (err.status === 422) {
+          // Erreurs de validation
+          const errors = err.error?.errors;
+          if (errors) {
+            const errorMessages = Object.values(errors).flat().join('\n');
+            alert(`❌ Erreur de validation :\n${errorMessages}`);
+          } else {
+            alert('❌ Données invalides. Veuillez vérifier votre saisie.');
+          }
         } else {
-          const errorMsg = err.error?.error || 'Erreur lors de la création du rendez-vous';
+          // Autres erreurs
+          const errorMsg = err.error?.message || err.error?.error || 'Erreur lors de la création du rendez-vous';
           alert(`❌ ${errorMsg}`);
         }
       }
@@ -268,7 +352,7 @@ export class CalendarComponent implements OnInit {
 
   formatDate(date: Date | null): string {
     if (!date) return '';
-    return date.toLocaleDateString('fr-FR', {
+    return new Date(date).toLocaleDateString('fr-FR', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
@@ -278,7 +362,7 @@ export class CalendarComponent implements OnInit {
 
   formatTime(date: Date | null): string {
     if (!date) return '';
-    return date.toLocaleTimeString('fr-FR', {
+    return new Date(date).toLocaleTimeString('fr-FR', {
       hour: '2-digit',
       minute: '2-digit'
     });

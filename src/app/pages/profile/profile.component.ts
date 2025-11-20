@@ -2,7 +2,6 @@ import { Component, OnInit } from '@angular/core';
 import { UserAccount } from '../../models/user.models';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
 import {ProfileService} from '../../services/profile.service';
 
 @Component({
@@ -89,7 +88,7 @@ export class ProfileComponent implements OnInit {
       },
       error: (err) => {
         this.saving = false;
-        this.showError('❌ Erreur lors de la mise à jour');
+        this.showError(' Erreur lors de la mise à jour');
       }
     });
   }
@@ -110,11 +109,11 @@ export class ProfileComponent implements OnInit {
       next: (res) => {
         this.user.image = res.image;
         this.saving = false;
-        this.showSuccess('✅ Photo de profil mise à jour !');
+        this.showSuccess(' Photo de profil mise à jour !');
       },
       error: (err) => {
         this.saving = false;
-        this.showError('❌ Erreur lors du téléchargement de la photo');
+        this.showError('Erreur lors du téléchargement de la photo');
       }
     });
   }
@@ -140,12 +139,12 @@ export class ProfileComponent implements OnInit {
         this.saving = false;
         this.passwordData = { current_password: '', new_password: '' };
         this.showPasswordSection = false;
-        this.showSuccess('✅ Mot de passe modifié avec succès !');
+        this.showSuccess(' Mot de passe modifié avec succès !');
       },
       error: (err) => {
         this.saving = false;
         const message = err.error?.message || 'Mot de passe actuel incorrect';
-        this.showError(`❌ ${message}`);
+        this.showError(` ${message}`);
       }
     });
   }
