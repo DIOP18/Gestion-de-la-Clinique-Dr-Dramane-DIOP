@@ -41,3 +41,12 @@ export interface AppointmentActionResponse {
 export interface PaymentRequest {
   paye_par: 'ESPECES' | 'CARTE' | 'MOBILE_MONEY' | 'VIREMENT';
 }
+export interface PaymentIntentResponse {
+  clientSecret: string;
+  paymentIntentId: string;
+  amount: number;
+}
+
+export interface ConfirmPaymentRequest {
+  payment_intent_id: string;
+}

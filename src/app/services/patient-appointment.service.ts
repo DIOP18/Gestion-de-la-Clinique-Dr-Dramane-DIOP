@@ -5,7 +5,7 @@ import {
   Appointment,
   AppointmentResponse,
   AppointmentActionResponse,
-  PaymentRequest
+  PaymentRequest, PaymentIntentResponse, ConfirmPaymentRequest
 } from '../models/appointment.model';
 import { environment } from '../../environments/environment';
 
@@ -49,8 +49,9 @@ export class PatientAppointmentService {
     );
   }
 
+
   /**
-   * Paye un rendez-vous
+   * Paye un rendez-vous (méthode traditionnelle - non Stripe)
    */
   payAppointment(appointmentId: number, paymentData: PaymentRequest): Observable<AppointmentActionResponse> {
     return this.http.post<AppointmentActionResponse>(
@@ -59,4 +60,27 @@ export class PatientAppointmentService {
       { headers: this.getHeaders() }
     );
   }
+
+  /**
+   * Créer un Payment Intent Stripe
+   */
+  createPaymentIntent(appointmentId: number): Observable<PaymentIntentResponse> {
+    return this.http.post<PaymentIntentResponse>(
+      `${this.apiUrl}/appointments/${appointmentId}/create-payment-intent`,
+      {},
+      { headers: this.getHeaders() }
+    );
+  }
+
+  /**
+   * Confirmer le paiement Stripe
+   */
+  confirmPayment(appointmentId: number, data: ConfirmPaymentRequest): Observable<AppointmentActionResponse> {
+    return this.http.post<AppointmentActionResponse>(
+      `${this.apiUrl}/appointments/${appointmentId}/confirm-payment`,
+      data,
+      { headers: this.getHeaders() }
+    );
+  }
+
 }
