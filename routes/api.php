@@ -2,7 +2,7 @@
 
 use App\Http\Controllers\AssistantController;
 use App\Http\Controllers\DoctorController;
-use App\Http\Controllers\profilcontroller;
+use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RendezVousController;
 use App\Http\Controllers\SpecialtyController;
@@ -44,21 +44,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/profile/update-password', [ProfileController::class, 'updatePassword']);
 });
 Route::get('/availability/{availabilityId}/check', [VisitorAppointmentController::class, 'checkAvailability']);
+
 Route::middleware('auth:sanctum')->group(function () {
-
-    // NOUVELLE ROUTE : Vérifier l'authentification de l'utilisateur
     Route::get('/auth/verify', [VisitorAppointmentController::class, 'verifyAuth']);
-
-    // Création de rendez-vous par un visiteur authentifié
     Route::post('/visitor/appointments', [VisitorAppointmentController::class, 'createFromVisitor']);
 
-    // Autres routes protégées...
     Route::get('/user', function (Request $request) {
         return $request->user();
     });
 });
 
-// Public endpoints (visitors can browse available doctors and slots)
 Route::get('/public/doctors', [PublicController::class, 'listDoctors']);
 Route::get('/public/doctors/{doctor}/availabilities', [PublicController::class, 'doctorAvailabilities']);
 Route::get('/specialties', [SpecialtyController::class, 'index']);
@@ -135,6 +130,9 @@ Route::middleware(['auth:sanctum', 'role:PATIENT'])->group(function () {
     Route::post('/patient/rendez-vous', [RendezVousController::class, 'patientCreate']);
     Route::get('/patient/appointments', [RendezVousController::class, 'getAppointments']);
     Route::put('/patient/appointments/{id}/cancel', [RendezVousController::class, 'cancelAppointment']);
+    Route::post('/patient/appointments/{id}/create-payment-intent', [RendezVousController::class, 'createPaymentIntent']);
+    Route::post('/patient/appointments/{id}/confirm-payment', [RendezVousController::class, 'confirmPayment']);
     Route::post('/patient/appointments/{id}/pay', [RendezVousController::class, 'payAppointment']);
-
 });
+
+

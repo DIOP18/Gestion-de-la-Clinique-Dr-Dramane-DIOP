@@ -27,6 +27,7 @@ class Appointment extends Model
         'note_medecin',
         'prix',
         'paye_par',
+        'est_paye',
     ];
 
     protected $casts = [

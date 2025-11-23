@@ -7,6 +7,8 @@ use App\Models\Appointment;
 use App\Models\Availability;
 use App\Models\Doctor;
 use App\Models\Patient;
+use App\Models\Payment;
+use App\Services\StripePaymentService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -16,6 +18,13 @@ use Illuminate\Support\Facades\Validator;
 
 class RendezVousController extends Controller
 {
+    protected $stripeService;
+
+    public function __construct(StripePaymentService $stripeService)
+    {
+        $this->stripeService = $stripeService;
+    }
+
     public function patientCreate(Request $request) {
 
         $validator = Validator::make($request->all(), [
@@ -241,6 +250,176 @@ class RendezVousController extends Controller
     /**
      * Payer un rendez-vous (seulement si CONFIRME)
      */
+    public function createPaymentIntent(Request $request, $id)
+    {
+        try {
+            $user = Auth::user();
+            $patient = Patient::where('user_id', $user->id)->first();
+
+            if (!$patient) {
+                return response()->json(['error' => 'Patient non trouvé'], 404);
+            }
+
+            $appointment = Appointment::with('doctor.user', 'doctor.specialty')
+                ->where('id', $id)
+                ->where('patient_id', $patient->id)
+                ->first();
+
+            if (!$appointment) {
+                return response()->json(['error' => 'Rendez-vous non trouvé'], 404);
+            }
+
+            if ($appointment->statut !== 'CONFIRME') {
+                return response()->json([
+                    'error' => 'Vous ne pouvez payer que les rendez-vous confirmés'
+                ], 400);
+            }
+
+            if ($appointment->est_paye) {
+                return response()->json([
+                    'error' => 'Ce rendez-vous est déjà payé'
+                ], 400);
+            }
+
+            // Créer le Payment Intent avec Stripe
+            $paymentIntent = $this->stripeService->createPaymentIntent(
+                $appointment->prix,
+                [
+                    'appointment_id' => $appointment->id,
+                    'patient_name' => $user->first_name . ' ' . $user->last_name,
+                    'doctor_name' => $appointment->doctor->user->first_name . ' ' . $appointment->doctor->user->last_name,
+                ]
+            );
+
+            return response()->json([
+                'clientSecret' => $paymentIntent->client_secret,
+                'paymentIntentId' => $paymentIntent->id,
+                'amount' => $appointment->prix,
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Erreur lors de la création du paiement',
+                'details' => $e->getMessage()
+            ], 500);
+        }
+    }
+    /**
+     * Confirmer le paiement après succès Stripe
+     */
+    public function confirmPayment(Request $request, $id)
+    {
+        \Log::info('=== STEP 1: CONFIRM PAYMENT CALLED ===');
+        \Log::info('Appointment ID: ' . $id);
+        \Log::info('Payment Intent ID: ' . $request->payment_intent_id);
+
+        try {
+            $validator = Validator::make($request->all(), [
+                'payment_intent_id' => ['required', 'string'],
+            ]);
+
+            if ($validator->fails()) {
+                \Log::error('STEP 2: Validation failed');
+                return response()->json(['errors' => $validator->errors()], 422);
+            }
+
+            \Log::info('STEP 2: Validation passed');
+
+            $user = Auth::user();
+            $patient = Patient::where('user_id', $user->id)->first();
+
+            if (!$patient) {
+                \Log::error('STEP 3: Patient not found');
+                return response()->json(['error' => 'Patient non trouvé'], 404);
+            }
+
+            \Log::info('STEP 3: Patient found - ID: ' . $patient->id);
+
+            DB::beginTransaction();
+
+            $appointment = Appointment::where('id', $id)
+                ->where('patient_id', $patient->id)
+                ->first();
+
+            if (!$appointment) {
+                \Log::error('STEP 4: Appointment not found');
+                DB::rollBack();
+                return response()->json(['error' => 'Rendez-vous non trouvé'], 404);
+            }
+
+            \Log::info('STEP 4: Appointment found - est_paye before: ' . ($appointment->est_paye ? 'true' : 'false'));
+
+            if ($appointment->est_paye) {
+                \Log::warning('STEP 5: Already paid');
+                DB::rollBack();
+                return response()->json(['error' => 'Ce rendez-vous est déjà payé'], 400);
+            }
+
+            \Log::info('STEP 5: Retrieving payment intent from Stripe');
+            $paymentIntent = $this->stripeService->retrievePaymentIntent($request->payment_intent_id);
+            \Log::info('STEP 6: Payment intent status: ' . $paymentIntent->status);
+
+            if ($paymentIntent->status !== 'succeeded') {
+                \Log::error('STEP 7: Payment not succeeded');
+                DB::rollBack();
+                return response()->json([
+                    'error' => 'Le paiement n\'a pas été confirmé',
+                    'status' => $paymentIntent->status
+                ], 400);
+            }
+
+            \Log::info('STEP 7: Updating appointment');
+            $appointment->update([
+                'est_paye' => true,
+                'paye_par' => 'CARTE'
+            ]);
+            \Log::info('STEP 8: Appointment updated - est_paye after: ' . ($appointment->est_paye ? 'true' : 'false'));
+
+            try {
+                \Log::info('STEP 9: Creating payment record');
+                Payment::create([
+                    'rendez_vous_id' => $appointment->id,
+                    'amount' => $appointment->prix,
+                    'currency' => 'XOF',
+                    'provider' => 'STRIPE',
+                    'status' => 'PAYE',
+                    'external_reference' => $paymentIntent->id,
+                    'provider_response' => [
+                        'payment_intent_id' => $paymentIntent->id,
+                        'status' => $paymentIntent->status,
+                        'amount' => $paymentIntent->amount,
+                        'currency' => $paymentIntent->currency,
+                    ],
+                    'paid_at' => now(),
+                ]);
+                \Log::info('STEP 10: Payment record created');
+            } catch (\Exception $paymentError) {
+                \Log::error('STEP 10: Error creating payment: ' . $paymentError->getMessage());
+            }
+
+            DB::commit();
+            \Log::info('STEP 11: Transaction committed');
+
+            $appointment->refresh();
+
+            return response()->json([
+                'message' => 'Paiement confirmé avec succès',
+                'appointment' => $appointment->load('doctor.user', 'doctor.specialty')
+            ], 200);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('EXCEPTION: ' . $e->getMessage());
+            \Log::error('TRACE: ' . $e->getTraceAsString());
+            return response()->json([
+                'error' => 'Erreur lors de la confirmation du paiement',
+                'details' => $e->getMessage()
+            ], 500);
+        }
+    }
+    /**
+     * Méthode de paiement alternative (non-Stripe)
+     */
     public function payAppointment(Request $request, $id)
     {
         try {
@@ -262,7 +441,6 @@ class RendezVousController extends Controller
                 return response()->json(['error' => 'Rendez-vous non trouvé'], 404);
             }
 
-            // Vérifier que le rendez-vous est CONFIRME
             if ($appointment->statut !== 'CONFIRME') {
                 DB::rollBack();
                 return response()->json([
@@ -270,7 +448,6 @@ class RendezVousController extends Controller
                 ], 400);
             }
 
-            // Vérifier qu'il n'est pas déjà payé
             if ($appointment->est_paye) {
                 DB::rollBack();
                 return response()->json([
@@ -278,8 +455,7 @@ class RendezVousController extends Controller
                 ], 400);
             }
 
-            // Valider la méthode de paiement
-            $validator = \Validator::make($request->all(), [
+            $validator = Validator::make($request->all(), [
                 'paye_par' => ['required', 'string', 'in:ESPECES,CARTE,MOBILE_MONEY,VIREMENT']
             ]);
 
@@ -288,10 +464,19 @@ class RendezVousController extends Controller
                 return response()->json(['errors' => $validator->errors()], 422);
             }
 
-            // Marquer comme payé
             $appointment->update([
                 'est_paye' => true,
                 'paye_par' => $request->paye_par
+            ]);
+
+            // Enregistrer dans payments (pour méthodes non-Stripe)
+            Payment::create([
+                'rendez_vous_id' => $appointment->id,
+                'amount' => $appointment->prix,
+                'currency' => 'XOF',
+                'provider' => $request->paye_par,
+                'status' => 'PAYE',
+                'paid_at' => now(),
             ]);
 
             DB::commit();
@@ -309,7 +494,6 @@ class RendezVousController extends Controller
             ], 500);
         }
     }
-
 }
 
 
