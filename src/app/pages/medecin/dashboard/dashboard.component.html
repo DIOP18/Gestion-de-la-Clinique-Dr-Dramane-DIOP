@@ -1,0 +1,131 @@
+<div class="dashboard-container">
+  <div class="dashboard-header">
+    <div class="header-left">
+      <h1>Tableau de bord — Médecin</h1>
+      <div class="subtitle">
+        {{ stats?.doctor?.name ?? '' }} • {{ stats?.doctor?.specialty ?? '' }}
+        <span class="period" *ngIf="stats"> — Période: {{ stats.period.start }} → {{ stats.period.end }} ({{ stats.filter }})</span>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <div class="filters">
+        <button class="filter-btn" [class.active]="filter==='7'" (click)="setFilter('7')">7j</button>
+        <button class="filter-btn" [class.active]="filter==='30'" (click)="setFilter('30')">30j</button>
+        <button class="filter-btn" [class.active]="filter==='90'" (click)="setFilter('90')">90j</button>
+        <button class="filter-btn" [class.active]="filter==='365'" (click)="setFilter('365')">1 an</button>
+      </div>
+      <button class="btn btn-refresh" (click)="loadStats()" [disabled]="loading">
+        <svg width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M12 6V3L8 7l4 4V8c2.76 0 5 2.24 5 5a5 5 0 01-5 5 5 5 0 01-5-5H5a7 7 0 007 7 7 7 0 007-7c0-3.87-3.13-7-7-7z"/></svg>
+        Rafraîchir
+      </button>
+      <button class="btn btn-pdf" (click)="downloadPDF()" [disabled]="downloadingPDF">
+        <svg width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M6 2h7l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zM13 3.5V9h5.5"/></svg>
+        {{ downloadingPDF ? 'Téléchargement...' : 'Télécharger PDF' }}
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="loading-container">
+    <div class="spinner"></div>
+    <p>Chargement des statistiques...</p>
+  </div>
+
+  <div *ngIf="!loading && stats" class="content">
+    <!-- top cards -->
+    <div class="stats-grid">
+      <div class="stat-card primary">
+        <div class="stat-icon-wrapper primary">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path stroke="currentColor" d="M12 12c2.7 0 5-2.3 5-5s-2.3-5-5-5-5 2.3-5 5 2.3 5 5 5z"/><path stroke="currentColor" d="M4 20c0-4 4-7 8-7s8 3 8 7"/></svg>
+        </div>
+        <div class="stat-info">
+          <div class="stat-label">Patients uniques</div>
+          <div class="stat-value">{{ stats.data.overview.total_patients | number }}</div>
+        </div>
+      </div>
+
+      <div class="stat-card info">
+        <div class="stat-icon-wrapper info">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path stroke="currentColor" d="M3 7h18M12 3v18"/></svg>
+        </div>
+        <div class="stat-info">
+          <div class="stat-label">Total RDV</div>
+          <div class="stat-value">{{ stats.data.overview.total_appointments | number }}</div>
+        </div>
+      </div>
+
+      <div class="stat-card success">
+        <div class="stat-icon-wrapper success">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path stroke="currentColor" d="M20 6L9 17l-5-5"/></svg>
+        </div>
+        <div class="stat-info">
+          <div class="stat-label">RDV complétés</div>
+          <div class="stat-value">{{ stats.data.overview.completed_appointments | number }}</div>
+        </div>
+      </div>
+
+      <div class="stat-card revenue large">
+        <div class="stat-icon-wrapper revenue">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path stroke="currentColor" d="M12 1v22M5 6h14"/></svg>
+        </div>
+        <div class="stat-info">
+          <div class="stat-label">Revenus</div>
+          <div class="stat-value">{{ stats.data.overview.total_revenue | number:'1.0-0' }} XOF</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- charts row -->
+    <div class="charts-row">
+      <div class="chart-section">
+        <h2>Répartition par statut</h2>
+        <div class="chart-container" id="status-pie"></div>
+      </div>
+
+      <div class="chart-section">
+        <h2>Évolution des pathologies</h2>
+        <div class="chart-container" id="pathology-stream"></div>
+      </div>
+
+      <div class="chart-section gantt-section">
+        <h2>Heatmap calendrier</h2>
+        <div class="chart-container" id="calendar-heatmap"></div>
+      </div>
+
+      <div class="chart-section">
+        <h2>Revenus par mois</h2>
+        <div class="chart-container" id="revenue-bar"></div>
+      </div>
+
+      <div class="chart-section">
+        <h2>Activité quotidienne</h2>
+        <div class="chart-container" id="appointments-line"></div>
+      </div>
+
+      <div class="chart-section">
+        <h2>Principaux motifs</h2>
+        <div class="chart-container" id="polar-motifs"></div>
+      </div>
+    </div>
+
+    <!-- table: derniers rendez-vous (optionnel si tu veux) -->
+    <div class="table-section">
+      <h2>Résumé</h2>
+      <div class="table-responsive">
+        <table class="data-table" *ngIf="stats">
+          <thead>
+          <tr>
+            <th>Mesure</th>
+            <th>Valeur</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr><td>Taux d'annulation</td><td>{{ stats.data.overview.cancellation_rate }}%</td></tr>
+          <tr><td>Durée moyenne (min)</td><td>{{ stats.data.overview.avg_duration }}</td></tr>
+          <tr><td>Patients récurrents</td><td>{{ stats.data.overview.recurring_patients }}</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

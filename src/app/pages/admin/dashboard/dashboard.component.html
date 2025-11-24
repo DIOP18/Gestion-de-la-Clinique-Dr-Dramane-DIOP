@@ -1,0 +1,177 @@
+<div class="dashboard-container">
+  <!-- HEADER -->
+  <div class="dashboard-header">
+    <h1> Dashboard Administrateur</h1>
+
+    <div class="header-actions">
+      <!-- Filtre de période -->
+      <select
+        [(ngModel)]="selectedFilter"
+        (change)="onFilterChange(selectedFilter)"
+        class="filter-select">
+        <option *ngFor="let option of filterOptions" [value]="option.value">
+          {{ option.label }}
+        </option>
+      </select>
+
+      <!-- Bouton PDF -->
+      <button
+        class="btn-pdf"
+        (click)="downloadPDF()"
+        [disabled]="downloadingPDF">
+        <span *ngIf="!downloadingPDF">Télécharger PDF</span>
+        <span *ngIf="downloadingPDF">Génération...</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- LOADING -->
+  <div *ngIf="loading" class="loading-container">
+    <div class="spinner"></div>
+    <p>Chargement des données...</p>
+  </div>
+
+  <!-- DASHBOARD CONTENT -->
+  <div *ngIf="!loading && stats" class="dashboard-content">
+
+    <!-- PÉRIODE -->
+    <div class="period-info">
+      📅 Période : {{ stats.period.start | date:'dd/MM/yyyy' }} - {{ stats.period.end | date:'dd/MM/yyyy' }}
+    </div>
+
+    <!-- STATS CARDS -->
+    <div class="stats-grid">
+      <div class="stat-card primary">
+        <div class="stat-icon">👥</div>
+        <div class="stat-info">
+          <div class="stat-label">Total Patients</div>
+          <div class="stat-value">{{ stats.data.overview.total_patients | number }}</div>
+        </div>
+      </div>
+
+      <div class="stat-card success">
+        <div class="stat-icon">🆕</div>
+        <div class="stat-info">
+          <div class="stat-label">Nouveaux Patients</div>
+          <div class="stat-value">{{ stats.data.overview.new_patients | number }}</div>
+        </div>
+      </div>
+
+      <div class="stat-card warning">
+        <div class="stat-icon">⭐</div>
+        <div class="stat-info">
+          <div class="stat-label">Patients Fidèles</div>
+          <div class="stat-value">{{ stats.data.overview.loyal_patients | number }}</div>
+        </div>
+      </div>
+
+      <div class="stat-card info">
+        <div class="stat-icon">👨‍⚕️</div>
+        <div class="stat-info">
+          <div class="stat-label">Médecins</div>
+          <div class="stat-value">{{ stats.data.overview.total_doctors | number }}</div>
+        </div>
+      </div>
+
+      <div class="stat-card info">
+        <div class="stat-icon">👩‍💼</div>
+        <div class="stat-info">
+          <div class="stat-label">Assistants</div>
+          <div class="stat-value">{{ stats.data.overview.total_assistants | number }}</div>
+        </div>
+      </div>
+
+      <div class="stat-card secondary">
+        <div class="stat-icon">📅</div>
+        <div class="stat-info">
+          <div class="stat-label">RDV Aujourd'hui</div>
+          <div class="stat-value">{{ stats.data.overview.appointments_today | number }}</div>
+        </div>
+      </div>
+
+      <div class="stat-card success">
+        <div class="stat-icon">✅</div>
+        <div class="stat-info">
+          <div class="stat-label">RDV Confirmés</div>
+          <div class="stat-value">{{ stats.data.overview.appointments_confirmed | number }}</div>
+        </div>
+      </div>
+
+      <div class="stat-card danger">
+        <div class="stat-icon">❌</div>
+        <div class="stat-info">
+          <div class="stat-label">Taux d'Annulation</div>
+          <div class="stat-value">{{ stats.data.overview.cancellation_rate }}%</div>
+        </div>
+      </div>
+
+      <div class="stat-card primary large">
+        <div class="stat-icon">💰</div>
+        <div class="stat-info">
+          <div class="stat-label">Revenus Total</div>
+          <div class="stat-value">{{ stats.data.overview.total_revenue | number }} XOF</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PARCOURS PATIENT -->
+    <div class="chart-section">
+      <h2>🔄 Parcours Patient (Flux de Fidélisation)</h2>
+      <div id="sankey" class="chart-container"></div>
+    </div>
+
+    <!-- RENDEZ-VOUS PAR JOUR -->
+    <div class="chart-section">
+      <h2>📊 Rendez-vous par Jour</h2>
+      <div id="bar-chart" class="chart-container"></div>
+    </div>
+
+    <!-- HEATMAP -->
+    <div class="chart-section">
+      <h2>🔥 Heatmap Temporelle (Créneaux les plus demandés)</h2>
+      <div id="heatmap" class="chart-container"></div>
+    </div>
+
+    <!-- TREEMAP -->
+    <div class="chart-section">
+      <h2>💼 Revenus par Spécialité</h2>
+      <div id="treemap" class="chart-container"></div>
+    </div>
+
+    <!-- NETWORK GRAPH -->
+    <div class="chart-section">
+      <h2>🕸️ Réseau Patients-Docteurs</h2>
+      <p class="chart-description">
+        <span class="legend-doctor">🔵 Docteurs</span>
+        <span class="legend-patient">🟢 Patients</span>
+        <span class="legend-info">Taille = nombre de consultations</span>
+      </p>
+      <div id="network-graph" class="chart-container"></div>
+    </div>
+
+    <!-- TABLEAU SPÉCIALITÉS -->
+    <div class="chart-section">
+      <h2>📋 Détails par Spécialité</h2>
+      <table class="data-table">
+        <thead>
+        <tr>
+          <th>Spécialité</th>
+          <th>Médecins</th>
+          <th>Rendez-vous</th>
+          <th>Revenus (XOF)</th>
+          <th>Prix Consultation</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr *ngFor="let spec of stats.data.specialty_stats">
+          <td><strong>{{ spec.label }}</strong></td>
+          <td>{{ spec.doctor_count }}</td>
+          <td>{{ spec.total_appointments | number }}</td>
+          <td>{{ spec.revenue | number }}</td>
+          <td>{{ spec.prix | number }}</td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

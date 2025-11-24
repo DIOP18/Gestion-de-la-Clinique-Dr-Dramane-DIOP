@@ -1,0 +1,226 @@
+<div class="dashboard-container">
+  <!-- HEADER -->
+  <div class="dashboard-header">
+    <div class="header-left">
+      <h1>Dashboard Assistant</h1>
+      <p class="subtitle" *ngIf="stats">{{ stats.date_formatted }}</p>
+    </div>
+
+    <div class="header-actions">
+      <button
+        class="btn-refresh"
+        (click)="loadStats(true)"
+        [disabled]="loading">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+        </svg>
+        <span>Actualiser</span>
+      </button>
+
+      <button
+        class="btn-pdf"
+        (click)="downloadPDF()"
+        [disabled]="downloadingPDF">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+        </svg>
+        <span *ngIf="!downloadingPDF">Télécharger PDF</span>
+        <span *ngIf="downloadingPDF">Génération...</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- LOADING -->
+  <div *ngIf="loading" class="loading-container">
+    <div class="spinner"></div>
+    <p>Chargement des données...</p>
+  </div>
+
+  <!-- DASHBOARD CONTENT -->
+  <div *ngIf="!loading && stats" class="dashboard-content">
+
+    <!-- STATS CARDS -->
+    <div class="stats-grid">
+      <div class="stat-card primary animate-fade-in" style="animation-delay: 0s;">
+        <div class="stat-icon-wrapper primary">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 11l3 3L22 4"/>
+            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+          </svg>
+        </div>
+        <div class="stat-info">
+          <div class="stat-label">Total RDV</div>
+          <div class="stat-value">{{ stats.data.overview.total_appointments_today | number }}</div>
+        </div>
+      </div>
+
+      <div class="stat-card success animate-fade-in" style="animation-delay: 0.1s;">
+        <div class="stat-icon-wrapper success">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+            <polyline points="22 4 12 14.01 9 11.01"/>
+          </svg>
+        </div>
+        <div class="stat-info">
+          <div class="stat-label">Confirmés</div>
+          <div class="stat-value">{{ stats.data.overview.confirmed_today | number }}</div>
+        </div>
+      </div>
+
+      <div class="stat-card info animate-fade-in" style="animation-delay: 0.2s;">
+        <div class="stat-icon-wrapper info">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+          </svg>
+        </div>
+        <div class="stat-info">
+          <div class="stat-label">Payés</div>
+          <div class="stat-value">{{ stats.data.overview.paid_today | number }}</div>
+        </div>
+      </div>
+
+      <div class="stat-card warning animate-fade-in" style="animation-delay: 0.3s;">
+        <div class="stat-icon-wrapper warning">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+        </div>
+        <div class="stat-info">
+          <div class="stat-label">Non Payés</div>
+          <div class="stat-value">{{ stats.data.overview.unpaid_today | number }}</div>
+        </div>
+      </div>
+
+      <div class="stat-card secondary animate-fade-in" style="animation-delay: 0.4s;">
+        <div class="stat-icon-wrapper secondary">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+        </div>
+        <div class="stat-info">
+          <div class="stat-label">Médecins Actifs</div>
+          <div class="stat-value">{{ stats.data.overview.active_doctors_today | number }}</div>
+        </div>
+      </div>
+
+      <div class="stat-card danger animate-fade-in" style="animation-delay: 0.5s;">
+        <div class="stat-icon-wrapper danger">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="15" y1="9" x2="9" y2="15"/>
+            <line x1="9" y1="9" x2="15" y2="15"/>
+          </svg>
+        </div>
+        <div class="stat-info">
+          <div class="stat-label">Annulés</div>
+          <div class="stat-value">{{ stats.data.overview.canceled_today | number }}</div>
+        </div>
+      </div>
+
+      <div class="stat-card large revenue animate-fade-in" style="animation-delay: 0.6s;">
+        <div class="stat-icon-wrapper revenue">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="1" x2="12" y2="23"/>
+            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+          </svg>
+        </div>
+        <div class="stat-info">
+          <div class="stat-label">Revenus du Jour</div>
+          <div class="stat-value">{{ stats.data.overview.total_revenue_today | number }} XOF</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CHARTS ROW 1: Funnel + Pie Charts -->
+    <div class="charts-row">
+      <div class="chart-section funnel-section animate-slide-up" style="animation-delay: 0.7s;">
+        <h2>Flux des Rendez-vous</h2>
+        <div class="chart-container" id="funnel-chart"></div>
+      </div>
+
+      <div class="chart-section pie-section animate-slide-up" style="animation-delay: 0.8s;">
+        <h2>Répartition des Paiements</h2>
+        <div class="chart-container" id="payment-pie"></div>
+      </div>
+
+      <div class="chart-section pie-section animate-slide-up" style="animation-delay: 0.9s;">
+        <h2>Répartition par Statut</h2>
+        <div class="chart-container" id="status-pie"></div>
+      </div>
+    </div>
+
+    <!-- GANTT CHART -->
+    <div class="chart-section gantt-section animate-slide-up" style="animation-delay: 1s;">
+      <h2>Planning des Rendez-vous</h2>
+      <p class="chart-description">
+        <span class="legend-item attente">En Attente</span>
+        <span class="legend-item confirme">Confirmé</span>
+        <span class="legend-item complete">Complété</span>
+        <span class="legend-item annule">Annulé</span>
+        <span class="legend-info">• Glissez les barres pour modifier l'horaire</span>
+      </p>
+      <div class="chart-container" id="gantt-chart"></div>
+    </div>
+
+    <!-- POLAR CHART -->
+    <div class="chart-section polar-section animate-slide-up" style="animation-delay: 1.1s;">
+      <h2>Motifs de Consultation</h2>
+      <div class="chart-container" id="polar-chart"></div>
+    </div>
+
+    <!-- TABLEAU RDV CONFIRMÉS ET PAYÉS -->
+    <div class="chart-section table-section animate-slide-up" style="animation-delay: 1.2s;">
+      <h2>Rendez-Vous du Jour  ({{ stats.data.confirmed_paid_appointments.length }})</h2>
+
+      <div class="table-responsive" *ngIf="stats.data.confirmed_paid_appointments.length > 0">
+        <table class="data-table">
+          <thead>
+          <tr>
+            <th>Heure</th>
+            <th>Médecin</th>
+            <th>Spécialité</th>
+            <th>Patient</th>
+            <th>Téléphone</th>
+            <th>Prix</th>
+            <th>Mode Paiement</th>
+            <th>Motif</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr *ngFor="let apt of stats.data.confirmed_paid_appointments; let i = index"
+              class="animate-fade-in"
+              [style.animation-delay]="(1.3 + i * 0.05) + 's'">
+            <td class="time-cell">
+              <strong>{{ apt.heure_debut }} - {{ apt.heure_fin }}</strong>
+            </td>
+            <td>{{ apt.doctor_name }}</td>
+            <td>
+              <span class="badge specialty">{{ apt.specialty }}</span>
+            </td>
+            <td><strong>{{ apt.patient_name }}</strong></td>
+            <td>{{ apt.patient_phone }}</td>
+            <td class="price-cell">{{ apt.prix | number }} XOF</td>
+            <td>
+              <span class="badge payment">{{ apt.paye_par }}</span>
+            </td>
+            <td class="motif-cell">{{ apt.motif }}</td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div *ngIf="stats.data.confirmed_paid_appointments.length === 0" class="empty-state">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <p>Aucun rendez-vous confirmé et payé pour aujourd'hui</p>
+      </div>
+    </div>
+  </div>
+</div>
