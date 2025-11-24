@@ -1,7 +1,10 @@
 <?php
 
 use App\Http\Controllers\AssistantController;
+use App\Http\Controllers\AssistantDashboardController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DoctorController;
+use App\Http\Controllers\DoctorDashboardController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RendezVousController;
@@ -98,8 +101,12 @@ Route::middleware(['auth:sanctum', 'check.blocked','role:ADMINISTRATEUR'])->grou
     Route::get('/assistants', [AdminController::class, 'assistantsIndex']);
     Route::post('/assistants', [AdminController::class, 'assistantsStore']);
     // Admin: statistiques globales
-    Route::get('/stats', [StatsController::class, 'admin']);
+    Route::get('/admin/dashboard/stats', [DashboardController::class, 'getAdminStats']);
+    Route::get('/admin/dashboard/export-pdf', [DashboardController::class, 'exportPDF']);
+
+
 });
+
 
 Route::middleware(['auth:sanctum', 'check.blocked','role:MEDECIN'])->group(function () {
     // Médecin: disponibilités CRUD
@@ -113,8 +120,8 @@ Route::middleware(['auth:sanctum', 'check.blocked','role:MEDECIN'])->group(funct
 
 
     // Médecin: statistiques personnelles
-    Route::get('/medecin/stats', [StatsController::class, 'doctor']);
-});
+    Route::get('/doctor/dashboard/stats', [DoctorDashboardController::class, 'getStats']);
+    Route::get('/doctor/dashboard/export-pdf', [DoctorDashboardController::class, 'exportPDF']);});
 
 Route::middleware(['auth:sanctum','check.blocked', 'role:ASSISTANT'])->group(function () {
     Route::get('/assistant/specialite', [SpecialtyController::class, 'specialitesIndexass']);
@@ -122,7 +129,9 @@ Route::middleware(['auth:sanctum','check.blocked', 'role:ASSISTANT'])->group(fun
     // Assistant: créer rendez-vous pour un patient, lister ceux qu'il programme
     Route::post('/assistant/rendez-vous', [RendezVousController::class, 'assistantCreate']);
     // Assistant: statistiques de ses rendez-vous
-    Route::get('/assistant/stats', [StatsController::class, 'assistant']);
+    Route::get('/assistant/dashboard/stats', [AssistantDashboardController::class, 'getStats']);
+    Route::patch('/assistant/appointments/{id}/update-time', [AssistantDashboardController::class, 'updateAppointmentTime']);
+    Route::get('/assistant/dashboard/export-pdf', [AssistantDashboardController::class, 'exportPDF']); // ← NOUVELLE ROUTE
 
 });
 
