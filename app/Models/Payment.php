@@ -30,6 +30,10 @@ class Payment extends Model
     {
         return $this->belongsTo(Appointment::class, 'rendez_vous_id');
     }
+    public function invoice()
+    {
+        return $this->hasOne(Invoice::class);
+    }
 
 }
 

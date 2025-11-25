@@ -142,6 +142,9 @@ Route::middleware(['auth:sanctum', 'role:PATIENT'])->group(function () {
     Route::post('/patient/appointments/{id}/create-payment-intent', [RendezVousController::class, 'createPaymentIntent']);
     Route::post('/patient/appointments/{id}/confirm-payment', [RendezVousController::class, 'confirmPayment']);
     Route::post('/patient/appointments/{id}/pay', [RendezVousController::class, 'payAppointment']);
+    Route::get('/patient/appointments/{id}/invoice/download', [RendezVousController::class, 'downloadInvoice']);
+
+
 });
 
 

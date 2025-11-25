@@ -8,6 +8,7 @@ use App\Models\Availability;
 use App\Models\Doctor;
 use App\Models\Patient;
 use App\Models\Payment;
+use App\Services\InvoiceService;
 use App\Services\StripePaymentService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -19,10 +20,14 @@ use Illuminate\Support\Facades\Validator;
 class RendezVousController extends Controller
 {
     protected $stripeService;
+    protected $invoiceService;
 
-    public function __construct(StripePaymentService $stripeService)
+
+    public function __construct(StripePaymentService $stripeService,InvoiceService $invoiceService)
     {
         $this->stripeService = $stripeService;
+        $this->invoiceService = $invoiceService;
+
     }
 
     public function patientCreate(Request $request) {
@@ -150,14 +155,15 @@ class RendezVousController extends Controller
                 return response()->json(['error' => 'Patient non trouvé'], 404);
             }
 
-            // Récupérer les rendez-vous avec relations
+            // ✅ CORRIGÉ - Utilise debut_at au lieu de date
             $appointments = Appointment::with([
                 'doctor.user',
                 'doctor.specialty',
-                'availability'
+                'availability',
+                'invoice' // ✅ Charge la relation invoice
             ])
                 ->where('patient_id', $patient->id)
-                ->orderBy('debut_at', 'desc')
+                ->orderBy('debut_at', 'desc') // ✅ CORRIGÉ: debut_at au lieu de date
                 ->get()
                 ->map(function($appointment) {
                     return [
@@ -177,6 +183,7 @@ class RendezVousController extends Controller
                         'prix' => $appointment->prix,
                         'paye_par' => $appointment->paye_par,
                         'note_medecin' => $appointment->note_medecin,
+                        'invoice' => $appointment->invoice,
                     ];
                 });
 
@@ -185,14 +192,13 @@ class RendezVousController extends Controller
             ], 200);
 
         } catch (\Exception $e) {
+            \Log::error('Error fetching appointments: ' . $e->getMessage());
             return response()->json([
                 'error' => 'Erreur lors de la récupération des rendez-vous',
                 'details' => $e->getMessage()
             ], 500);
         }
-    }
-
-    /**
+    }    /**
      * Annuler un rendez-vous (seulement si EN ATTENTE)
      */
     public function cancelAppointment($id)
@@ -307,6 +313,8 @@ class RendezVousController extends Controller
     /**
      * Confirmer le paiement après succès Stripe
      */
+
+
     public function confirmPayment(Request $request, $id)
     {
         \Log::info('=== STEP 1: CONFIRM PAYMENT CALLED ===');
@@ -347,7 +355,7 @@ class RendezVousController extends Controller
                 return response()->json(['error' => 'Rendez-vous non trouvé'], 404);
             }
 
-            \Log::info('STEP 4: Appointment found - est_paye before: ' . ($appointment->est_paye ? 'true' : 'false'));
+            \Log::info('STEP 4: Appointment found');
 
             if ($appointment->est_paye) {
                 \Log::warning('STEP 5: Already paid');
@@ -373,11 +381,14 @@ class RendezVousController extends Controller
                 'est_paye' => true,
                 'paye_par' => 'CARTE'
             ]);
-            \Log::info('STEP 8: Appointment updated - est_paye after: ' . ($appointment->est_paye ? 'true' : 'false'));
+            \Log::info('STEP 8: Appointment updated');
+
+            $payment = null;
+            $invoice = null;
 
             try {
                 \Log::info('STEP 9: Creating payment record');
-                Payment::create([
+                $payment = Payment::create([
                     'rendez_vous_id' => $appointment->id,
                     'amount' => $appointment->prix,
                     'currency' => 'XOF',
@@ -392,24 +403,36 @@ class RendezVousController extends Controller
                     ],
                     'paid_at' => now(),
                 ]);
-                \Log::info('STEP 10: Payment record created');
+                \Log::info('STEP 10: Payment record created - ID: ' . $payment->id);
+
+                // ✅ UTILISATION DU SERVICE INJECTÉ
+                \Log::info('STEP 11: Generating invoice for payment');
+                $invoice = $this->invoiceService->generateInvoiceForPayment($payment);
+                \Log::info('STEP 12: Invoice generated successfully - Number: ' . $invoice->invoice_number);
+
             } catch (\Exception $paymentError) {
-                \Log::error('STEP 10: Error creating payment: ' . $paymentError->getMessage());
+                \Log::error('Error creating payment/invoice: ' . $paymentError->getMessage());
+                \Log::error('Stack trace: ' . $paymentError->getTraceAsString());
+                // Ne pas rollback si le paiement est créé mais pas la facture
+                // On peut régénérer la facture plus tard
             }
 
             DB::commit();
-            \Log::info('STEP 11: Transaction committed');
+            \Log::info('STEP 13: Transaction committed successfully');
 
+            // Recharger l'appointment avec toutes les relations
             $appointment->refresh();
+            $appointment->load('doctor.user', 'doctor.specialty', 'invoice');
 
             return response()->json([
                 'message' => 'Paiement confirmé avec succès',
-                'appointment' => $appointment->load('doctor.user', 'doctor.specialty')
+                'appointment' => $appointment,
+                'invoice' => $invoice
             ], 200);
 
         } catch (\Exception $e) {
             DB::rollBack();
-            \Log::error('EXCEPTION: ' . $e->getMessage());
+            \Log::error('EXCEPTION in confirmPayment: ' . $e->getMessage());
             \Log::error('TRACE: ' . $e->getTraceAsString());
             return response()->json([
                 'error' => 'Erreur lors de la confirmation du paiement',
@@ -417,9 +440,7 @@ class RendezVousController extends Controller
             ], 500);
         }
     }
-    /**
-     * Méthode de paiement alternative (non-Stripe)
-     */
+
     public function payAppointment(Request $request, $id)
     {
         try {
@@ -494,6 +515,70 @@ class RendezVousController extends Controller
             ], 500);
         }
     }
-}
+    /**
+     * ✅ Télécharge la facture d'un rendez-vous
+     */
+    public function downloadInvoice($id)
+    {
+        try {
+
+
+            $user = Auth::user();
+            $patient = Patient::where('user_id', $user->id)->first();
+
+            if (!$patient) {
+                \Log::error('Patient not found');
+                return response()->json(['error' => 'Patient non trouvé'], 404);
+            }
+
+            \Log::info('Patient found: ' . $patient->id);
+
+            $appointment = Appointment::where('id', $id)
+                ->where('patient_id', $patient->id)
+                ->with('invoice')
+                ->first();
+
+            if (!$appointment) {
+                \Log::error('Appointment not found');
+                return response()->json(['error' => 'Rendez-vous non trouvé'], 404);
+            }
+
+            \Log::info('Appointment found. Has invoice: ' . ($appointment->invoice ? 'Yes' : 'No'));
+
+            if (!$appointment->invoice) {
+                \Log::error('No invoice found for appointment');
+                return response()->json(['error' => 'Aucune facture disponible pour ce rendez-vous'], 404);
+            }
+
+            \Log::info('Invoice found: ' . $appointment->invoice->invoice_number);
+            \Log::info('PDF path: ' . $appointment->invoice->pdf_path);
+
+            $filePath = storage_path('app/public/' . $appointment->invoice->pdf_path);
+            \Log::info('Full file path: ' . $filePath);
+
+            if (!file_exists($filePath)) {
+                \Log::error('Invoice PDF file not found at: ' . $filePath);
+                return response()->json(['error' => 'Fichier de facture introuvable'], 404);
+            }
+
+            \Log::info('Sending file: ' . $filePath);
+
+            return response()->download(
+                $filePath,
+                "facture_{$appointment->invoice->invoice_number}.pdf",
+                [
+                    'Content-Type' => 'application/pdf',
+                ]
+            );
+
+        } catch (\Exception $e) {
+            \Log::error('EXCEPTION in downloadInvoice: ' . $e->getMessage());
+            \Log::error('TRACE: ' . $e->getTraceAsString());
+            return response()->json([
+                'error' => 'Erreur lors du téléchargement de la facture',
+                'details' => $e->getMessage()
+            ], 500);
+        }
+    }}
 
 

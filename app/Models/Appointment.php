@@ -31,6 +31,7 @@ class Appointment extends Model
     ];
 
     protected $casts = [
+        'est_paye' => 'boolean',
         'debut_at' => 'datetime',
         'fin_at' => 'datetime',
     ];
@@ -64,6 +65,7 @@ class Appointment extends Model
     {
         return $this->hasOne(Invoice::class, 'rendez_vous_id');
     }
+
 }
 
 
