@@ -72,6 +72,15 @@ export class PatientAppointmentService {
     );
   }
 
+  downloadInvoice(appointmentId: number): Observable<Blob> {
+    return this.http.get(
+      `${this.apiUrl}/appointments/${appointmentId}/invoice/download`,
+      {
+        headers: this.getHeaders(),
+        responseType: 'blob'
+      }
+    );
+  }
   /**
    * Confirmer le paiement Stripe
    */

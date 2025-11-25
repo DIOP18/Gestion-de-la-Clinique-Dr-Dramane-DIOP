@@ -1048,6 +1048,15 @@
   background: #f8f9fa;
   border-color: #dee2e6;
 }
+.btn-download {
+  background: linear-gradient(135deg, #10b981, #059669);
+
+  &:hover {
+    background: linear-gradient(135deg, #059669, #047857);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+  }
+}
 
 /* Responsive */
 @media (max-width: 576px) {

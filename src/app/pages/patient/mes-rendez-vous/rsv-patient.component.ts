@@ -4,7 +4,6 @@ import { FormsModule } from '@angular/forms';
 import { PatientAppointmentService } from '../../../services/patient-appointment.service';
 import { Appointment, AppointmentStatus } from '../../../models/appointment.model';
 
-// Déclaration Stripe
 declare var Stripe: any;
 
 @Component({
@@ -23,20 +22,17 @@ export class RsvPatientComponent implements OnInit {
   errorMessage: string = '';
   successMessage: string = '';
 
-  // Modal de paiement
   showPaymentModal: boolean = false;
   selectedAppointment: Appointment | null = null;
   paymentMethod: 'STRIPE' | 'ESPECES' | 'MOBILE_MONEY' | 'VIREMENT' = 'STRIPE';
   paymentStep: 'init' | 'card' | 'processing' | 'success' = 'init';
   paymentError: string = '';
 
-  // Stripe
   stripe: any = null;
   cardElementStripe: any = null;
   clientSecret: string = '';
   paymentIntentId: string = '';
 
-  // Filtres
   filterStatus: string = 'all';
   searchTerm: string = '';
 
@@ -47,16 +43,12 @@ export class RsvPatientComponent implements OnInit {
     this.initializeStripe();
   }
 
-  /**
-   * Initialiser Stripe
-   */
   initializeStripe(): void {
-    // Remplacez par votre clé publique Stripe
     this.stripe = Stripe('pk_test_51SW2w63bKlYWTdntu4FGX31qG3PKThotlZMsXatDsxnTf2FuXpwf4QcmF8tlrd9J2H8tv2wLIJNW5ruYMP2Zvb3F00CJ6mKut9');
   }
 
   /**
-   * Charge tous les rendez-vous
+   * ✅ MODIFIÉ - Charge tous les rendez-vous avec debug
    */
   loadAppointments(): void {
     this.isLoading = true;
@@ -64,7 +56,24 @@ export class RsvPatientComponent implements OnInit {
 
     this.appointmentService.getAppointments().subscribe({
       next: (response) => {
+        console.log('=== RAW API RESPONSE ===', response);
         this.appointments = response.appointments;
+
+        // ✅ DEBUG - Vérifie les données reçues
+        console.log('=== APPOINTMENTS LOADED ===');
+        this.appointments.forEach(apt => {
+          console.log({
+            id: apt.id,
+            doctor: apt.doctor_full_name,
+            est_paye: apt.est_paye,
+            type_est_paye: typeof apt.est_paye,
+            invoice: apt.invoice,
+            has_invoice: !!apt.invoice,
+            hasInvoice_result: this.hasInvoice(apt),
+            canPay_result: this.canPay(apt)
+          });
+        });
+
         this.applyFilters();
         this.isLoading = false;
       },
@@ -76,9 +85,6 @@ export class RsvPatientComponent implements OnInit {
     });
   }
 
-  /**
-   * Applique les filtres de recherche et statut
-   */
   applyFilters(): void {
     this.filteredAppointments = this.appointments.filter(apt => {
       const matchesStatus = this.filterStatus === 'all' || apt.statut === this.filterStatus;
@@ -87,9 +93,6 @@ export class RsvPatientComponent implements OnInit {
     });
   }
 
-  /**
-   * Annule un rendez-vous
-   */
   cancelAppointment(appointment: Appointment): void {
     if (!confirm(`Êtes-vous sûr d'annuler votre rendez-vous avec Dr. ${appointment.doctor_full_name} ?`)) {
       return;
@@ -108,9 +111,6 @@ export class RsvPatientComponent implements OnInit {
     });
   }
 
-  /**
-   * Ouvre le modal de paiement
-   */
   openPaymentModal(appointment: Appointment): void {
     this.selectedAppointment = appointment;
     this.showPaymentModal = true;
@@ -120,11 +120,7 @@ export class RsvPatientComponent implements OnInit {
     this.paymentIntentId = '';
   }
 
-  /**
-   * Ferme le modal de paiement
-   */
   closePaymentModal(): void {
-    // Détruire l'élément Stripe AVANT de fermer le modal
     if (this.cardElementStripe) {
       try {
         this.cardElementStripe.unmount();
@@ -144,25 +140,18 @@ export class RsvPatientComponent implements OnInit {
     this.paymentIntentId = '';
   }
 
-  /**
-   * Passer à l'étape de paiement par carte
-   */
   proceedToCardPayment(): void {
     if (!this.selectedAppointment) return;
 
     if (this.paymentMethod === 'STRIPE') {
       this.paymentError = '';
 
-      // Créer le Payment Intent
       this.appointmentService.createPaymentIntent(this.selectedAppointment.id).subscribe({
         next: (response) => {
           this.clientSecret = response.clientSecret;
           this.paymentIntentId = response.paymentIntentId;
-
-          // Changer l'étape APRÈS avoir reçu le clientSecret
           this.paymentStep = 'card';
 
-          // Attendre que le DOM soit complètement rendu
           setTimeout(() => {
             this.mountStripeCard();
           }, 300);
@@ -173,14 +162,10 @@ export class RsvPatientComponent implements OnInit {
         }
       });
     } else {
-      // Paiement non-Stripe
       this.processNonStripePayment();
     }
   }
 
-  /**
-   * Monter l'élément de carte Stripe
-   */
   mountStripeCard(): void {
     const cardElementContainer = document.getElementById('card-element');
 
@@ -190,7 +175,6 @@ export class RsvPatientComponent implements OnInit {
       return;
     }
 
-    // Détruire l'élément existant s'il y en a un
     if (this.cardElementStripe) {
       this.cardElementStripe.unmount();
       this.cardElementStripe.destroy();
@@ -218,7 +202,6 @@ export class RsvPatientComponent implements OnInit {
       this.cardElementStripe = elements.create('card', { style });
       this.cardElementStripe.mount('#card-element');
 
-      // Écouter les erreurs de validation
       this.cardElementStripe.on('change', (event: any) => {
         if (event.error) {
           this.paymentError = event.error.message;
@@ -234,9 +217,6 @@ export class RsvPatientComponent implements OnInit {
     }
   }
 
-  /**
-   * Confirmer le paiement Stripe
-   */
   async confirmStripePayment(): Promise<void> {
     if (!this.selectedAppointment) {
       this.paymentError = 'Rendez-vous non sélectionné';
@@ -253,14 +233,12 @@ export class RsvPatientComponent implements OnInit {
       return;
     }
 
-
     this.paymentError = '';
 
     try {
       console.log('Starting payment confirmation...');
       console.log('Client Secret:', this.clientSecret);
 
-      // Étape 1: Créer la méthode de paiement PENDANT QUE l'élément est encore visible
       const { error: createError, paymentMethod } = await this.stripe.createPaymentMethod({
         type: 'card',
         card: this.cardElementStripe,
@@ -273,11 +251,8 @@ export class RsvPatientComponent implements OnInit {
       }
 
       console.log('Payment method created:', paymentMethod);
-
-      // ✅ MAINTENANT on peut changer l'état car on a déjà récupéré les données
       this.paymentStep = 'processing';
 
-      // Étape 2: Confirmer le paiement avec la méthode de paiement créée
       const { error: confirmError, paymentIntent } = await this.stripe.confirmCardPayment(
         this.clientSecret,
         {
@@ -295,25 +270,22 @@ export class RsvPatientComponent implements OnInit {
       if (paymentIntent && paymentIntent.status === 'succeeded') {
         console.log('Payment successful:', paymentIntent);
 
-        // Confirmer le paiement côté serveur
         this.appointmentService.confirmPayment(
           this.selectedAppointment.id,
           { payment_intent_id: paymentIntent.id }
         ).subscribe({
           next: (response) => {
+            console.log('✅ Server confirmation response:', response);
             this.paymentStep = 'success';
             this.successMessage = response.message;
 
-            // Rafraîchir les rendez-vous après un délai
             setTimeout(() => {
-              this.loadAppointments();
+              this.loadAppointments(); // ✅ Recharge les données
               this.closePaymentModal();
             }, 2000);
           },
           error: (error) => {
             console.error('Server confirmation error:', error);
-            console.error('Error status:', error.status);
-            console.error('Error message:', error.error);
             this.paymentError = error.error?.error || error.error?.message || 'Erreur lors de la confirmation du paiement';
             this.paymentStep = 'card';
           }
@@ -329,9 +301,6 @@ export class RsvPatientComponent implements OnInit {
     }
   }
 
-  /**
-   * Traiter un paiement non-Stripe
-   */
   processNonStripePayment(): void {
     if (!this.selectedAppointment) return;
 
@@ -358,12 +327,79 @@ export class RsvPatientComponent implements OnInit {
     });
   }
 
+  /**
+   * ✅ MODIFIÉ - Vérifie si on peut annuler
+   */
   canCancel(appointment: Appointment): boolean {
     return appointment.statut === 'EN ATTENTE';
   }
 
+  /**
+   * ✅ MODIFIÉ - Vérifie si on peut payer
+   */
   canPay(appointment: Appointment): boolean {
-    return appointment.statut === 'CONFIRME' && !appointment.est_paye;
+    const isConfirmed = appointment.statut === 'CONFIRME';
+    const isNotPaid = !appointment.est_paye;
+
+    console.log(`canPay for appointment ${appointment.id}:`, {
+      statut: appointment.statut,
+      isConfirmed,
+      est_paye: appointment.est_paye,
+      isNotPaid,
+      result: isConfirmed && isNotPaid
+    });
+
+    return isConfirmed && isNotPaid;
+  }
+
+  /**
+   * ✅ MODIFIÉ - Vérifie si une facture est disponible
+   */
+  hasInvoice(appointment: Appointment): boolean {
+    const isPaid = !!appointment.est_paye;
+    const hasInvoiceData = !!appointment.invoice;
+
+    console.log(`hasInvoice for appointment ${appointment.id}:`, {
+      est_paye: appointment.est_paye,
+      isPaid,
+      invoice: appointment.invoice,
+      hasInvoiceData,
+      result: isPaid && hasInvoiceData
+    });
+
+    return isPaid && hasInvoiceData;
+  }
+
+  /**
+   * ✅ AJOUTÉ - Télécharge la facture
+   */
+  downloadInvoice(appointment: Appointment): void {
+    console.log('Downloading invoice for appointment:', appointment.id);
+
+    if (!appointment.invoice) {
+      this.errorMessage = 'Aucune facture disponible';
+      setTimeout(() => this.errorMessage = '', 3000);
+      return;
+    }
+
+    this.appointmentService.downloadInvoice(appointment.id).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `facture_${appointment.invoice?.invoice_number}.pdf`;
+        link.click();
+        window.URL.revokeObjectURL(url);
+
+        this.successMessage = 'Facture téléchargée avec succès';
+        setTimeout(() => this.successMessage = '', 3000);
+      },
+      error: (error) => {
+        console.error('Download error:', error);
+        this.errorMessage = error.error?.error || 'Erreur lors du téléchargement';
+        setTimeout(() => this.errorMessage = '', 3000);
+      }
+    });
   }
 
   getStatusClass(statut: AppointmentStatus): string {

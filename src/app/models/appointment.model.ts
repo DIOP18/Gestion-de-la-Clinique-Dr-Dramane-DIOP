@@ -19,6 +19,17 @@ export interface Appointment {
   paye_par: string | null;
   note_medecin: string | null;
   cree_par_type?: string;
+  invoice?: Invoice;
+}
+export interface Invoice {
+  id: number;
+  invoice_number: string;
+  rendez_vous_id: number;
+  payment_id: number;
+  total_amount: number;
+  currency: string;
+  pdf_path: string;
+  issued_at: string;
 }
 
 export type AppointmentStatus =
@@ -35,6 +46,8 @@ export interface AppointmentResponse {
 export interface AppointmentActionResponse {
   message: string;
   appointment: Appointment;
+  invoice?: Invoice; // ✅ Ajouté
+
 }
 
 
