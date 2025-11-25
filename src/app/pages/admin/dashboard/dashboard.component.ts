@@ -1,8 +1,8 @@
 import { Component, OnInit, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import * as d3 from 'd3';
-import {DashboardAdminService, DashboardStats} from '../../../services/dashboard.admin.service';
-import {FormsModule} from '@angular/forms';
+import { DashboardAdminService, DashboardStats } from '../../../services/dashboard.admin.service';
+import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-admin-dashboard',
@@ -15,6 +15,8 @@ export class DashboardComponent implements OnInit, AfterViewInit {
   stats: DashboardStats | null = null;
   loading = true;
   selectedFilter = '30';
+  selectedSpecialty = 'all';
+  selectedPaymentStatus = 'all';
   downloadingPDF = false;
 
   filterOptions = [
@@ -23,6 +25,8 @@ export class DashboardComponent implements OnInit, AfterViewInit {
     { value: '90', label: '90 derniers jours' },
     { value: '365', label: '1 an' }
   ];
+
+  specialties: string[] = [];
 
   constructor(private dashboardService: DashboardAdminService) {}
 
@@ -39,8 +43,9 @@ export class DashboardComponent implements OnInit, AfterViewInit {
     this.dashboardService.getStats(this.selectedFilter).subscribe({
       next: (data) => {
         this.stats = data;
+        // Extraire les spécialités
+        this.specialties = ['all', ...data.data.specialty_stats.map(s => s.label)];
         this.loading = false;
-        // Attendre que le DOM soit mis à jour
         setTimeout(() => {
           this.createAllCharts();
         }, 100);
@@ -52,9 +57,12 @@ export class DashboardComponent implements OnInit, AfterViewInit {
     });
   }
 
-  onFilterChange(filter: string): void {
-    this.selectedFilter = filter;
+  onFilterChange(): void {
     this.loadStats();
+  }
+
+  onSpecialtyChange(): void {
+    this.createAllCharts();
   }
 
   downloadPDF(): void {
@@ -78,146 +86,22 @@ export class DashboardComponent implements OnInit, AfterViewInit {
 
   private createAllCharts(): void {
     if (!this.stats) return;
-
-    this.createHeatmap();
-    this.createTreemap();
-    this.createBarChart();
-    this.createNetworkGraph();
-    this.createSankeyDiagram();
+    this.createAppointmentsByDayChart();
+    this.createAppointmentsBySpecialtyChart();
+    this.createRevenueBySpecialtyChart();
   }
 
-  // ========== 1. HEATMAP TEMPORELLE ==========
-  private createHeatmap(): void {
-    const data = this.stats?.data.heatmap || [];
-    const container = d3.select('#heatmap');
-    container.selectAll('*').remove();
-
-    const margin = { top: 50, right: 50, bottom: 50, left: 80 };
-    const width = 900 - margin.left - margin.right;
-    const height = 400 - margin.top - margin.bottom;
-
-    const svg = container
-      .append('svg')
-      .attr('width', width + margin.left + margin.right)
-      .attr('height', height + margin.top + margin.bottom)
-      .append('g')
-      .attr('transform', `translate(${margin.left},${margin.top})`);
-
-    const days = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
-    const hours = Array.from({ length: 14 }, (_, i) => i + 8); // 8h à 21h
-
-    const x = d3.scaleBand()
-      .range([0, width])
-      .domain(hours.map(h => `${h}:00`))
-      .padding(0.05);
-
-    const y = d3.scaleBand()
-      .range([height, 0])
-      .domain(days)
-      .padding(0.05);
-
-    const maxCount = d3.max(data, d => d.count) || 1;
-    const colorScale = d3.scaleSequential(d3.interpolateBlues)
-      .domain([0, maxCount]);
-
-    svg.append('g')
-      .attr('transform', `translate(0,${height})`)
-      .call(d3.axisBottom(x))
-      .selectAll('text')
-      .style('font-size', '11px');
-
-    svg.append('g')
-      .call(d3.axisLeft(y))
-      .selectAll('text')
-      .style('font-size', '11px');
-
-    svg.selectAll()
-      .data(data, (d: any) => d.day + ':' + d.hour)
-      .enter()
-      .append('rect')
-      .attr('x', (d: any) => x(d.hour) || 0)
-      .attr('y', (d: any) => y(d.day) || 0)
-      .attr('width', x.bandwidth())
-      .attr('height', y.bandwidth())
-      .style('fill', (d: any) => colorScale(d.count))
-      .style('stroke', 'white')
-      .style('stroke-width', 2)
-      .append('title')
-      .text((d: any) => `${d.day} ${d.hour}: ${d.count} RDV`);
-
-    svg.append('text')
-      .attr('x', width / 2)
-      .attr('y', -20)
-      .attr('text-anchor', 'middle')
-      .style('font-size', '16px')
-      .style('font-weight', 'bold')
-      .text('Heatmap des Rendez-vous (Jour × Heure)');
-  }
-
-  // ========== 2. TREEMAP DES REVENUS PAR SPÉCIALITÉ ==========
-  private createTreemap(): void {
-    const data = this.stats?.data.specialty_stats || [];
-    const container = d3.select('#treemap');
-    container.selectAll('*').remove();
-
-    const width = 900;
-    const height = 400;
-
-    const root = d3.hierarchy({ children: data } as any)
-      .sum((d: any) => d.revenue || 0)
-      .sort((a, b) => (b.value || 0) - (a.value || 0));
-
-    d3.treemap()
-      .size([width, height])
-      .padding(2)
-      (root);
-
-    const svg = container
-      .append('svg')
-      .attr('width', width)
-      .attr('height', height);
-
-    const colorScale = d3.scaleOrdinal(d3.schemeSet3);
-
-    const cell = svg.selectAll('g')
-      .data(root.leaves())
-      .enter()
-      .append('g')
-      .attr('transform', (d: any) => `translate(${d.x0},${d.y0})`);
-
-    cell.append('rect')
-      .attr('width', (d: any) => d.x1 - d.x0)
-      .attr('height', (d: any) => d.y1 - d.y0)
-      .style('fill', (d: any, i: number) => colorScale(i.toString()))
-      .style('stroke', 'white')
-      .style('stroke-width', 2)
-      .append('title')
-      .text((d: any) => `${d.data.label}\nMédecins: ${d.data.doctor_count}\nRevenus: ${d.data.revenue} XOF`);
-
-    cell.append('text')
-      .attr('x', 5)
-      .attr('y', 20)
-      .text((d: any) => d.data.label)
-      .style('font-size', '12px')
-      .style('font-weight', 'bold')
-      .style('fill', '#333');
-
-    cell.append('text')
-      .attr('x', 5)
-      .attr('y', 40)
-      .text((d: any) => `${d.data.revenue.toLocaleString()} XOF`)
-      .style('font-size', '11px')
-      .style('fill', '#666');
-  }
-
-  // ========== 3. GRAPHIQUE À BARRES (RDV par jour) ==========
-  private createBarChart(): void {
+  // ========== GRAPHIQUE: Rendez-vous par jour ==========
+  private createAppointmentsByDayChart(): void {
     const data = this.stats?.data.appointments_by_day || [];
-    const container = d3.select('#bar-chart');
+    const container = d3.select('#appointments-by-day');
     container.selectAll('*').remove();
 
-    const margin = { top: 30, right: 30, bottom: 70, left: 60 };
-    const width = 900 - margin.left - margin.right;
+    if (data.length === 0) return;
+
+    const margin = { top: 20, right: 30, bottom: 70, left: 60 };
+    const containerWidth = (container.node() as HTMLElement)?.clientWidth || 800;
+    const width = Math.min(containerWidth, 900) - margin.left - margin.right;
     const height = 300 - margin.top - margin.bottom;
 
     const svg = container
@@ -236,175 +120,272 @@ export class DashboardComponent implements OnInit, AfterViewInit {
       .domain([0, d3.max(data, d => d.count) || 0])
       .range([height, 0]);
 
+    // Axes
     svg.append('g')
       .attr('transform', `translate(0,${height})`)
       .call(d3.axisBottom(x))
       .selectAll('text')
       .attr('transform', 'rotate(-45)')
       .style('text-anchor', 'end')
-      .style('font-size', '10px');
+      .style('font-size', '10px')
+      .style('font-weight', '600');
 
     svg.append('g')
-      .call(d3.axisLeft(y));
+      .call(d3.axisLeft(y))
+      .style('font-size', '11px')
+      .style('font-weight', '600');
 
-    svg.selectAll('rect')
+    // Barres
+    svg.selectAll('.bar')
       .data(data)
       .enter()
       .append('rect')
+      .attr('class', 'bar')
       .attr('x', d => x(d.date_formatted) || 0)
       .attr('y', d => y(d.count))
       .attr('width', x.bandwidth())
       .attr('height', d => height - y(d.count))
-      .attr('fill', '#667eea')
+      .attr('fill', '#1565c0')
+      .attr('rx', 4)
+      .style('cursor', 'pointer')
+      .on('mouseover', function() {
+        d3.select(this).attr('fill', '#1a237e');
+      })
+      .on('mouseout', function() {
+        d3.select(this).attr('fill', '#1565c0');
+      })
       .append('title')
-      .text(d => `${d.date_formatted}: ${d.count} RDV`);
+      .text(d => `${d.date_formatted}\n${d.count} rendez-vous`);
   }
 
-  // ========== 4. FORCE GRAPH (Réseau Patients-Docteurs) ==========
-  private createNetworkGraph(): void {
-    const networkData = this.stats?.data.network;
-    if (!networkData) return;
-
-    const container = d3.select('#network-graph');
+  // ========== GRAPHIQUE: Rendez-vous par spécialité ==========
+  private createAppointmentsBySpecialtyChart(): void {
+    let data = this.stats?.data.specialty_stats || [];
+    const container = d3.select('#appointments-by-specialty');
     container.selectAll('*').remove();
 
-    const width = 900;
-    const height = 600;
+    // Filtrer par spécialité si nécessaire
+    if (this.selectedSpecialty !== 'all') {
+      data = data.filter(d => d.label === this.selectedSpecialty);
+    }
+
+    if (data.length === 0) {
+      container.append('p')
+        .style('text-align', 'center')
+        .style('color', '#6b7280')
+        .style('padding', '40px')
+        .text('Aucune donnée disponible');
+      return;
+    }
+
+    const margin = { top: 20, right: 30, bottom: 80, left: 60 };
+    const containerWidth = (container.node() as HTMLElement)?.clientWidth || 800;
+    const width = Math.min(containerWidth, 800) - margin.left - margin.right;
+    const height = 300 - margin.top - margin.bottom;
+
+    const svg = container
+      .append('svg')
+      .attr('width', width + margin.left + margin.right)
+      .attr('height', height + margin.top + margin.bottom)
+      .append('g')
+      .attr('transform', `translate(${margin.left},${margin.top})`);
+
+    const x = d3.scaleBand()
+      .range([0, width])
+      .domain(data.map(d => d.label))
+      .padding(0.3);
+
+    const y = d3.scaleLinear()
+      .domain([0, d3.max(data, d => d.total_appointments) || 0])
+      .range([height, 0]);
+
+    // Axes
+    svg.append('g')
+      .attr('transform', `translate(0,${height})`)
+      .call(d3.axisBottom(x))
+      .selectAll('text')
+      .attr('transform', 'rotate(-45)')
+      .style('text-anchor', 'end')
+      .style('font-size', '11px')
+      .style('font-weight', '600');
+
+    svg.append('g')
+      .call(d3.axisLeft(y))
+      .style('font-size', '11px')
+      .style('font-weight', '600');
+
+    // Barres
+    svg.selectAll('.bar')
+      .data(data)
+      .enter()
+      .append('rect')
+      .attr('class', 'bar')
+      .attr('x', d => x(d.label) || 0)
+      .attr('y', d => y(d.total_appointments))
+      .attr('width', x.bandwidth())
+      .attr('height', d => height - y(d.total_appointments))
+      .attr('fill', '#1565c0')
+      .attr('rx', 4)
+      .style('cursor', 'pointer')
+      .on('mouseover', function() {
+        d3.select(this).attr('fill', '#1a237e');
+      })
+      .on('mouseout', function() {
+        d3.select(this).attr('fill', '#1565c0');
+      })
+      .append('title')
+      .text(d => `${d.label}\n${d.total_appointments} rendez-vous\n${d.doctor_count} médecin(s)`);
+
+    // Valeurs au-dessus des barres
+    svg.selectAll('.label')
+      .data(data)
+      .enter()
+      .append('text')
+      .attr('class', 'label')
+      .attr('x', d => (x(d.label) || 0) + x.bandwidth() / 2)
+      .attr('y', d => y(d.total_appointments) - 5)
+      .attr('text-anchor', 'middle')
+      .style('font-size', '12px')
+      .style('font-weight', '700')
+      .style('fill', '#1565c0')
+      .text(d => d.total_appointments);
+  }
+
+  // ========== GRAPHIQUE: Revenus par spécialité (Donut Chart) ==========
+  private createRevenueBySpecialtyChart(): void {
+    let data = this.stats?.data.specialty_stats || [];
+    const container = d3.select('#revenue-by-specialty');
+    container.selectAll('*').remove();
+
+    // Filtrer par spécialité si nécessaire
+    if (this.selectedSpecialty !== 'all') {
+      data = data.filter(d => d.label === this.selectedSpecialty);
+    }
+
+    // Filtrer uniquement les spécialités avec des revenus
+    data = data.filter(d => d.revenue > 0);
+
+    if (data.length === 0) {
+      container.append('p')
+        .style('text-align', 'center')
+        .style('color', '#6b7280')
+        .style('padding', '40px')
+        .text('Aucune donnée disponible');
+      return;
+    }
+
+    const containerWidth = (container.node() as HTMLElement)?.clientWidth || 400;
+    const width = Math.min(containerWidth, 400);
+    const height = 400;
+    const radius = Math.min(width, height) / 2 - 40;
 
     const svg = container
       .append('svg')
       .attr('width', width)
-      .attr('height', height);
+      .attr('height', height)
+      .append('g')
+      .attr('transform', `translate(${width / 2},${height / 2})`);
 
-    const simulation = d3.forceSimulation(networkData.nodes as any)
-      .force('link', d3.forceLink(networkData.links as any).id((d: any) => d.id).distance(100))
-      .force('charge', d3.forceManyBody().strength(-300))
-      .force('center', d3.forceCenter(width / 2, height / 2));
+    const color = d3.scaleOrdinal<string>()
+      .domain(data.map(d => d.label))
+      .range(['#1565c0', '#1a237e', '#10b981', '#3b82f6', '#8b5cf6', '#ef4444', '#f59e0b']);
 
-    const link = svg.append('g')
-      .selectAll('line')
-      .data(networkData.links)
+    const pie = d3.pie<any>()
+      .value(d => d.revenue)
+      .sort(null);
+
+    const arc = d3.arc<any>()
+      .innerRadius(radius * 0.5)
+      .outerRadius(radius);
+
+    const arcHover = d3.arc<any>()
+      .innerRadius(radius * 0.5)
+      .outerRadius(radius + 10);
+
+    const arcs = svg.selectAll('.arc')
+      .data(pie(data))
       .enter()
-      .append('line')
-      .style('stroke', '#999')
-      .style('stroke-width', (d: any) => Math.sqrt(d.value));
+      .append('g')
+      .attr('class', 'arc');
 
-    const node = svg.append('g')
-      .selectAll('circle')
-      .data(networkData.nodes)
+    arcs.append('path')
+      .attr('d', arc)
+      .attr('fill', d => color(d.data.label))
+      .style('cursor', 'pointer')
+      .style('stroke', '#fff')
+      .style('stroke-width', '2px')
+      .on('mouseover', function(event, d) {
+        d3.select(this)
+          .transition()
+          .duration(200)
+          .attr('d', arcHover);
+      })
+      .on('mouseout', function() {
+        d3.select(this)
+          .transition()
+          .duration(200)
+          .attr('d', arc);
+      })
+      .append('title')
+      .text(d => `${d.data.label}\n${d.data.revenue.toLocaleString()} FCFA\n${((d.endAngle - d.startAngle) / (2 * Math.PI) * 100).toFixed(1)}%`);
+
+    // Labels avec pourcentage
+    arcs.append('text')
+      .attr('transform', d => `translate(${arc.centroid(d)})`)
+      .attr('text-anchor', 'middle')
+      .style('font-size', '11px')
+      .style('font-weight', '700')
+      .style('fill', 'white')
+      .text(d => {
+        const percent = ((d.endAngle - d.startAngle) / (2 * Math.PI)) * 100;
+        return percent > 5 ? `${percent.toFixed(0)}%` : '';
+      });
+
+    // Légende
+    const legend = svg.append('g')
+      .attr('transform', `translate(${radius + 20}, ${-radius})`);
+
+    const legendItems = legend.selectAll('.legend-item')
+      .data(data)
       .enter()
-      .append('circle')
-      .attr('r', (d: any) => 5 + d.appointment_count * 2)
-      .style('fill', (d: any) => d.type === 'doctor' ? '#667eea' : '#48bb78')
-      .call(d3.drag<any, any>()
-        .on('start', (event, d: any) => {
-          if (!event.active) simulation.alphaTarget(0.3).restart();
-          d.fx = d.x;
-          d.fy = d.y;
-        })
-        .on('drag', (event, d: any) => {
-          d.fx = event.x;
-          d.fy = event.y;
-        })
-        .on('end', (event, d: any) => {
-          if (!event.active) simulation.alphaTarget(0);
-          d.fx = null;
-          d.fy = null;
-        }));
+      .append('g')
+      .attr('class', 'legend-item')
+      .attr('transform', (d, i) => `translate(0, ${i * 25})`);
 
-    node.append('title')
-      .text((d: any) => `${d.name}\n${d.appointment_count} RDV`);
+    legendItems.append('rect')
+      .attr('width', 18)
+      .attr('height', 18)
+      .attr('rx', 3)
+      .attr('fill', d => color(d.label));
 
-    simulation.on('tick', () => {
-      link
-        .attr('x1', (d: any) => d.source.x)
-        .attr('y1', (d: any) => d.source.y)
-        .attr('x2', (d: any) => d.target.x)
-        .attr('y2', (d: any) => d.target.y);
-
-      node
-        .attr('cx', (d: any) => d.x)
-        .attr('cy', (d: any) => d.y);
-    });
+    legendItems.append('text')
+      .attr('x', 24)
+      .attr('y', 14)
+      .style('font-size', '11px')
+      .style('font-weight', '600')
+      .style('fill', '#374151')
+      .text(d => d.label);
   }
 
-  // ========== 5. SANKEY DIAGRAM (Parcours Patient) ==========
-  private createSankeyDiagram(): void {
-    const journey = this.stats?.data.patient_journey;
-    if (!journey) return;
+  getStatusLabel(status: string): string {
+    const labels: any = {
+      'EN ATTENTE': 'En attente',
+      'CONFIRME': 'Confirmé',
+      'COMPLETE': 'Complété',
+      'ANNULE': 'Annulé',
+      'REPORT': 'Reporté'
+    };
+    return labels[status] || status;
+  }
 
-    const container = d3.select('#sankey');
-    container.selectAll('*').remove();
-
-    // Simplifié : affichage en blocs avec flèches
-    const width = 900;
-    const height = 250;
-    const blockWidth = 180;
-    const blockHeight = 80;
-    const gap = 50;
-
-    const svg = container
-      .append('svg')
-      .attr('width', width)
-      .attr('height', height);
-
-    const steps = [
-      { label: 'Nouveaux Patients', value: journey.new_patients, x: 50 },
-      { label: '1ère Consultation', value: journey.first_consultation, x: 50 + blockWidth + gap },
-      { label: 'Suivi', value: journey.follow_up, x: 50 + (blockWidth + gap) * 2 },
-      { label: 'Fidélisés (2+ RDV)', value: journey.loyal_patients, x: 50 + (blockWidth + gap) * 3 }
-    ];
-
-    steps.forEach((step, i) => {
-      const g = svg.append('g')
-        .attr('transform', `translate(${step.x},80)`);
-
-      g.append('rect')
-        .attr('width', blockWidth)
-        .attr('height', blockHeight)
-        .attr('fill', '#667eea')
-        .attr('rx', 8);
-
-      g.append('text')
-        .attr('x', blockWidth / 2)
-        .attr('y', 30)
-        .attr('text-anchor', 'middle')
-        .style('fill', 'white')
-        .style('font-size', '14px')
-        .style('font-weight', 'bold')
-        .text(step.label);
-
-      g.append('text')
-        .attr('x', blockWidth / 2)
-        .attr('y', 55)
-        .attr('text-anchor', 'middle')
-        .style('fill', 'white')
-        .style('font-size', '24px')
-        .style('font-weight', 'bold')
-        .text(step.value);
-
-      // Flèche
-      if (i < steps.length - 1) {
-        svg.append('path')
-          .attr('d', `M ${step.x + blockWidth + 10} 120 L ${step.x + blockWidth + gap - 10} 120`)
-          .attr('stroke', '#667eea')
-          .attr('stroke-width', 3)
-          .attr('fill', 'none')
-          .attr('marker-end', 'url(#arrow)');
-      }
-    });
-
-    // Définir le marqueur de flèche
-    svg.append('defs').append('marker')
-      .attr('id', 'arrow')
-      .attr('viewBox', '0 0 10 10')
-      .attr('refX', 8)
-      .attr('refY', 5)
-      .attr('markerWidth', 6)
-      .attr('markerHeight', 6)
-      .attr('orient', 'auto')
-      .append('path')
-      .attr('d', 'M 0 0 L 10 5 L 0 10 z')
-      .attr('fill', '#667eea');
+  getStatusClass(status: string): string {
+    const classes: any = {
+      'EN ATTENTE': 'status-pending',
+      'CONFIRME': 'status-confirmed',
+      'COMPLETE': 'status-completed',
+      'ANNULE': 'status-cancelled',
+      'REPORT': 'status-rescheduled'
+    };
+    return classes[status] || '';
   }
 }

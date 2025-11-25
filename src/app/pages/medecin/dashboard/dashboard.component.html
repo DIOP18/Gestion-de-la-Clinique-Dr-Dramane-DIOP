@@ -1,10 +1,11 @@
 <div class="dashboard-container">
+  <!-- HEADER -->
   <div class="dashboard-header">
     <div class="header-left">
-      <h1>Tableau de bord — Médecin</h1>
-      <div class="subtitle">
-        {{ stats?.doctor?.name ?? '' }} • {{ stats?.doctor?.specialty ?? '' }}
-        <span class="period" *ngIf="stats"> — Période: {{ stats.period.start }} → {{ stats.period.end }} ({{ stats.filter }})</span>
+      <h1>Tableau de Bord Médecin</h1>
+      <div class="subtitle" *ngIf="stats">
+        Dr. {{ stats.doctor.name }} • {{ stats.doctor.specialty }}
+        <span class="period">Période: {{ stats.period.start | date:'dd/MM/yyyy' }} - {{ stats.period.end | date:'dd/MM/yyyy' }}</span>
       </div>
     </div>
 
@@ -15,38 +16,64 @@
         <button class="filter-btn" [class.active]="filter==='90'" (click)="setFilter('90')">90j</button>
         <button class="filter-btn" [class.active]="filter==='365'" (click)="setFilter('365')">1 an</button>
       </div>
+
       <button class="btn btn-refresh" (click)="loadStats()" [disabled]="loading">
-        <svg width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M12 6V3L8 7l4 4V8c2.76 0 5 2.24 5 5a5 5 0 01-5 5 5 5 0 01-5-5H5a7 7 0 007 7 7 7 0 007-7c0-3.87-3.13-7-7-7z"/></svg>
-        Rafraîchir
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 2v6h-6"></path>
+          <path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path>
+          <path d="M3 22v-6h6"></path>
+          <path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path>
+        </svg>
+        Actualiser
       </button>
-      <button class="btn btn-pdf" (click)="downloadPDF()" [disabled]="downloadingPDF">
-        <svg width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M6 2h7l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zM13 3.5V9h5.5"/></svg>
-        {{ downloadingPDF ? 'Téléchargement...' : 'Télécharger PDF' }}
+
+      <button class="btn btn-pdf" (click)="downloadPDF()" [disabled]="downloadingPDF || loading">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="7 10 12 15 17 10"></polyline>
+          <line x1="12" y1="15" x2="12" y2="3"></line>
+        </svg>
+        {{ downloadingPDF ? 'Téléchargement...' : 'PDF' }}
       </button>
     </div>
   </div>
 
+  <!-- LOADING -->
   <div *ngIf="loading" class="loading-container">
     <div class="spinner"></div>
     <p>Chargement des statistiques...</p>
   </div>
 
+  <!-- CONTENT -->
   <div *ngIf="!loading && stats" class="content">
-    <!-- top cards -->
+
+    <!-- STATS CARDS -->
     <div class="stats-grid">
-      <div class="stat-card primary">
+      <!-- Patients Uniques -->
+      <div class="stat-card">
         <div class="stat-icon-wrapper primary">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path stroke="currentColor" d="M12 12c2.7 0 5-2.3 5-5s-2.3-5-5-5-5 2.3-5 5 2.3 5 5 5z"/><path stroke="currentColor" d="M4 20c0-4 4-7 8-7s8 3 8 7"/></svg>
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+          </svg>
         </div>
         <div class="stat-info">
-          <div class="stat-label">Patients uniques</div>
+          <div class="stat-label">Patients Uniques</div>
           <div class="stat-value">{{ stats.data.overview.total_patients | number }}</div>
         </div>
       </div>
 
-      <div class="stat-card info">
+      <!-- Total RDV -->
+      <div class="stat-card">
         <div class="stat-icon-wrapper info">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path stroke="currentColor" d="M3 7h18M12 3v18"/></svg>
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="16" y1="2" x2="16" y2="6"></line>
+            <line x1="8" y1="2" x2="8" y2="6"></line>
+            <line x1="3" y1="10" x2="21" y2="10"></line>
+          </svg>
         </div>
         <div class="stat-info">
           <div class="stat-label">Total RDV</div>
@@ -54,78 +81,154 @@
         </div>
       </div>
 
-      <div class="stat-card success">
+      <!-- RDV Aujourd'hui -->
+      <div class="stat-card">
         <div class="stat-icon-wrapper success">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path stroke="currentColor" d="M20 6L9 17l-5-5"/></svg>
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
         </div>
         <div class="stat-info">
-          <div class="stat-label">RDV complétés</div>
-          <div class="stat-value">{{ stats.data.overview.completed_appointments | number }}</div>
+          <div class="stat-label">RDV Aujourd'hui</div>
+          <div class="stat-value">{{ stats.data.overview.appointments_today | number }}</div>
         </div>
       </div>
 
-      <div class="stat-card revenue large">
-        <div class="stat-icon-wrapper revenue">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path stroke="currentColor" d="M12 1v22M5 6h14"/></svg>
+      <!-- RDV Confirmés -->
+      <div class="stat-card">
+        <div class="stat-icon-wrapper success">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+          </svg>
         </div>
         <div class="stat-info">
-          <div class="stat-label">Revenus</div>
-          <div class="stat-value">{{ stats.data.overview.total_revenue | number:'1.0-0' }} XOF</div>
+          <div class="stat-label">RDV Confirmés</div>
+          <div class="stat-value">{{ stats.data.overview.confirmed_appointments | number }}</div>
+        </div>
+      </div>
+
+      <!-- Patients Récurrents -->
+      <div class="stat-card">
+        <div class="stat-icon-wrapper info">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+          </svg>
+        </div>
+        <div class="stat-info">
+          <div class="stat-label">Patients Récurrents</div>
+          <div class="stat-value">{{ stats.data.overview.recurring_patients | number }}</div>
+        </div>
+      </div>
+
+      <!-- Revenus Total -->
+      <div class="stat-card large">
+        <div class="stat-icon-wrapper revenue">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="1" x2="12" y2="23"></line>
+            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+          </svg>
+        </div>
+        <div class="stat-info">
+          <div class="stat-label">Revenus Total</div>
+          <div class="stat-value">{{ stats.data.overview.total_revenue | number:'1.0-0' }} FCFA</div>
         </div>
       </div>
     </div>
 
-    <!-- charts row -->
+    <!-- RENDEZ-VOUS DU JOUR -->
+    <div class="section" *ngIf="stats.data.overview.today_appointments && stats.data.overview.today_appointments.length > 0">
+      <h2 class="section-title">Rendez-vous d'Aujourd'hui</h2>
+      <div class="appointments-today-grid">
+        <div class="appointment-card" *ngFor="let apt of stats.data.overview.today_appointments">
+          <div class="appointment-time">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+            {{ apt.time }}
+          </div>
+          <div class="appointment-patient">
+            <strong>{{ apt.patient_name }}</strong>
+          </div>
+          <div class="appointment-motif">{{ apt.motif }}</div>
+          <span class="status-badge" [ngClass]="getStatusClass(apt.status)">
+            {{ getStatusLabel(apt.status) }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- GRAPHIQUES -->
     <div class="charts-row">
+      <!-- Répartition par Statut -->
       <div class="chart-section">
-        <h2>Répartition par statut</h2>
+        <h2>Répartition par Statut</h2>
         <div class="chart-container" id="status-pie"></div>
       </div>
 
+      <!-- Top Pathologies -->
       <div class="chart-section">
-        <h2>Évolution des pathologies</h2>
-        <div class="chart-container" id="pathology-stream"></div>
+        <h2>Top 10 Pathologies</h2>
+        <div class="chart-container" id="pathology-bar"></div>
       </div>
 
-      <div class="chart-section gantt-section">
-        <h2>Heatmap calendrier</h2>
-        <div class="chart-container" id="calendar-heatmap"></div>
-      </div>
 
+      <!-- Revenus par Mois -->
       <div class="chart-section">
-        <h2>Revenus par mois</h2>
+        <h2>Revenus par Mois</h2>
         <div class="chart-container" id="revenue-bar"></div>
       </div>
 
-      <div class="chart-section">
-        <h2>Activité quotidienne</h2>
+      <!-- Activité Quotidienne -->
+      <div class="chart-section full-width">
+        <h2>Évolution des Rendez-vous</h2>
         <div class="chart-container" id="appointments-line"></div>
-      </div>
-
-      <div class="chart-section">
-        <h2>Principaux motifs</h2>
-        <div class="chart-container" id="polar-motifs"></div>
       </div>
     </div>
 
-    <!-- table: derniers rendez-vous (optionnel si tu veux) -->
-    <div class="table-section">
-      <h2>Résumé</h2>
+    <!-- RÉSUMÉ -->
+    <div class="section">
+      <h2 class="section-title">Résumé de la Période</h2>
       <div class="table-responsive">
-        <table class="data-table" *ngIf="stats">
+        <table class="data-table">
           <thead>
           <tr>
-            <th>Mesure</th>
-            <th>Valeur</th>
+            <th>INDICATEUR</th>
+            <th>VALEUR</th>
           </tr>
           </thead>
           <tbody>
-          <tr><td>Taux d'annulation</td><td>{{ stats.data.overview.cancellation_rate }}%</td></tr>
-          <tr><td>Durée moyenne (min)</td><td>{{ stats.data.overview.avg_duration }}</td></tr>
-          <tr><td>Patients récurrents</td><td>{{ stats.data.overview.recurring_patients }}</td></tr>
+          <tr>
+            <td>Taux d'Annulation</td>
+            <td><strong>{{ stats.data.overview.cancellation_rate }}%</strong></td>
+          </tr>
+          <tr>
+            <td>Durée Moyenne de Consultation</td>
+            <td><strong>{{ stats.data.overview.avg_duration }} minutes</strong></td>
+          </tr>
+          <tr>
+            <td>Patients Récurrents (2+ RDV)</td>
+            <td><strong>{{ stats.data.overview.recurring_patients }}</strong></td>
+          </tr>
+          <tr>
+            <td>Revenu Moyen par RDV</td>
+            <td>
+              <strong>
+                {{ stats.data.overview.total_appointments > 0 ?
+                (stats.data.overview.total_revenue / stats.data.overview.total_appointments | number:'1.0-0') : 0
+                }} FCFA
+              </strong>
+            </td>
+          </tr>
           </tbody>
         </table>
       </div>
     </div>
+
   </div>
 </div>

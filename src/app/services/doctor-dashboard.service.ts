@@ -3,6 +3,15 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 
+// Rendez-vous d'aujourd'hui
+export interface TodayAppointment {
+  id: number;
+  time: string;
+  patient_name: string;
+  motif: string;
+  status: string;
+}
+
 export interface DoctorDashboardStats {
   success: boolean;
   filter: string;
@@ -27,9 +36,11 @@ export interface DoctorDashboardStats {
 export interface OverviewStats {
   total_patients: number;
   total_appointments: number;
+  appointments_today: number;
+  today_appointments: TodayAppointment[];
   confirmed_appointments: number;
-  completed_appointments: number;
   canceled_appointments: number;
+  rescheduled_appointments: number;
   cancellation_rate: number;
   total_revenue: number;
   avg_duration: number;

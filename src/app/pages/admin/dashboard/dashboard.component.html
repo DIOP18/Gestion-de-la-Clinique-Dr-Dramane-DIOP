@@ -1,24 +1,37 @@
 <div class="dashboard-container">
   <!-- HEADER -->
   <div class="dashboard-header">
-    <h1> Dashboard Administrateur</h1>
+    <div class="header-left">
+      <h1>Tableau de Bord Administrateur</h1>
+      <p class="subtitle">Vue d'ensemble des rendez-vous de la clinique</p>
+    </div>
 
     <div class="header-actions">
-      <!-- Filtre de période -->
       <select
         [(ngModel)]="selectedFilter"
-        (change)="onFilterChange(selectedFilter)"
-        class="filter-select">
+        (change)="onFilterChange()"
+        class="form-control">
         <option *ngFor="let option of filterOptions" [value]="option.value">
           {{ option.label }}
         </option>
       </select>
 
-      <!-- Bouton PDF -->
-      <button
-        class="btn-pdf"
-        (click)="downloadPDF()"
-        [disabled]="downloadingPDF">
+      <button class="btn-refresh" (click)="loadStats()" [disabled]="loading">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 2v6h-6"></path>
+          <path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path>
+          <path d="M3 22v-6h6"></path>
+          <path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path>
+        </svg>
+        Actualiser
+      </button>
+
+      <button class="btn-pdf" (click)="downloadPDF()" [disabled]="downloadingPDF || loading">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="7 10 12 15 17 10"></polyline>
+          <line x1="12" y1="15" x2="12" y2="3"></line>
+        </svg>
         <span *ngIf="!downloadingPDF">Télécharger PDF</span>
         <span *ngIf="downloadingPDF">Génération...</span>
       </button>
@@ -36,142 +49,175 @@
 
     <!-- PÉRIODE -->
     <div class="period-info">
-      📅 Période : {{ stats.period.start | date:'dd/MM/yyyy' }} - {{ stats.period.end | date:'dd/MM/yyyy' }}
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+        <line x1="16" y1="2" x2="16" y2="6"></line>
+        <line x1="8" y1="2" x2="8" y2="6"></line>
+        <line x1="3" y1="10" x2="21" y2="10"></line>
+      </svg>
+      Période : {{ stats.period.start | date:'dd/MM/yyyy' }} - {{ stats.period.end | date:'dd/MM/yyyy' }}
     </div>
 
     <!-- STATS CARDS -->
     <div class="stats-grid">
-      <div class="stat-card primary">
-        <div class="stat-icon">👥</div>
+      <!-- Total Patients -->
+      <div class="stat-card">
+        <div class="stat-icon-wrapper primary">
+          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+          </svg>
+        </div>
         <div class="stat-info">
           <div class="stat-label">Total Patients</div>
           <div class="stat-value">{{ stats.data.overview.total_patients | number }}</div>
         </div>
       </div>
 
-      <div class="stat-card success">
-        <div class="stat-icon">🆕</div>
+      <!-- Nouveaux Patients -->
+      <div class="stat-card">
+        <div class="stat-icon-wrapper success">
+          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="8.5" cy="7" r="4"></circle>
+            <line x1="20" y1="8" x2="20" y2="14"></line>
+            <line x1="23" y1="11" x2="17" y2="11"></line>
+          </svg>
+        </div>
         <div class="stat-info">
           <div class="stat-label">Nouveaux Patients</div>
           <div class="stat-value">{{ stats.data.overview.new_patients | number }}</div>
         </div>
       </div>
 
-      <div class="stat-card warning">
-        <div class="stat-icon">⭐</div>
+      <!-- Total Rendez-vous -->
+      <div class="stat-card">
+        <div class="stat-icon-wrapper info">
+          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="16" y1="2" x2="16" y2="6"></line>
+            <line x1="8" y1="2" x2="8" y2="6"></line>
+            <line x1="3" y1="10" x2="21" y2="10"></line>
+          </svg>
+        </div>
         <div class="stat-info">
-          <div class="stat-label">Patients Fidèles</div>
-          <div class="stat-value">{{ stats.data.overview.loyal_patients | number }}</div>
+          <div class="stat-label">Total Rendez-vous</div>
+          <div class="stat-value">{{ stats.data.overview.total_appointments | number }}</div>
         </div>
       </div>
 
-      <div class="stat-card info">
-        <div class="stat-icon">👨‍⚕️</div>
-        <div class="stat-info">
-          <div class="stat-label">Médecins</div>
-          <div class="stat-value">{{ stats.data.overview.total_doctors | number }}</div>
+      <!-- Confirmés -->
+      <div class="stat-card">
+        <div class="stat-icon-wrapper success">
+          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+          </svg>
         </div>
-      </div>
-
-      <div class="stat-card info">
-        <div class="stat-icon">👩‍💼</div>
         <div class="stat-info">
-          <div class="stat-label">Assistants</div>
-          <div class="stat-value">{{ stats.data.overview.total_assistants | number }}</div>
-        </div>
-      </div>
-
-      <div class="stat-card secondary">
-        <div class="stat-icon">📅</div>
-        <div class="stat-info">
-          <div class="stat-label">RDV Aujourd'hui</div>
-          <div class="stat-value">{{ stats.data.overview.appointments_today | number }}</div>
-        </div>
-      </div>
-
-      <div class="stat-card success">
-        <div class="stat-icon">✅</div>
-        <div class="stat-info">
-          <div class="stat-label">RDV Confirmés</div>
+          <div class="stat-label">Confirmés</div>
           <div class="stat-value">{{ stats.data.overview.appointments_confirmed | number }}</div>
         </div>
       </div>
 
-      <div class="stat-card danger">
-        <div class="stat-icon">❌</div>
+      <!-- Taux d'annulation -->
+      <div class="stat-card">
+        <div class="stat-icon-wrapper danger">
+          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="15" y1="9" x2="9" y2="15"></line>
+            <line x1="9" y1="9" x2="15" y2="15"></line>
+          </svg>
+        </div>
         <div class="stat-info">
           <div class="stat-label">Taux d'Annulation</div>
           <div class="stat-value">{{ stats.data.overview.cancellation_rate }}%</div>
         </div>
       </div>
 
-      <div class="stat-card primary large">
-        <div class="stat-icon">💰</div>
+      <!-- Revenus Total -->
+      <div class="stat-card large">
+        <div class="stat-icon-wrapper revenue">
+          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="1" x2="12" y2="23"></line>
+            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+          </svg>
+        </div>
         <div class="stat-info">
-          <div class="stat-label">Revenus Total</div>
-          <div class="stat-value">{{ stats.data.overview.total_revenue | number }} XOF</div>
+          <div class="stat-label">Revenus Total (Payés)</div>
+          <div class="stat-value">{{ stats.data.overview.total_revenue | number }} FCFA</div>
         </div>
       </div>
     </div>
 
-    <!-- PARCOURS PATIENT -->
-    <div class="chart-section">
-      <h2>🔄 Parcours Patient (Flux de Fidélisation)</h2>
-      <div id="sankey" class="chart-container"></div>
+    <!-- FILTRES AVANCÉS -->
+    <div class="filters-section">
+      <div class="filter-group">
+        <label>Filtrer par spécialité</label>
+        <select
+          [(ngModel)]="selectedSpecialty"
+          (change)="onSpecialtyChange()"
+          class="form-control">
+          <option value="all">Toutes les spécialités</option>
+          <option *ngFor="let spec of specialties.slice(1)" [value]="spec">
+            {{ spec }}
+          </option>
+        </select>
+      </div>
     </div>
 
-    <!-- RENDEZ-VOUS PAR JOUR -->
-    <div class="chart-section">
-      <h2>📊 Rendez-vous par Jour</h2>
-      <div id="bar-chart" class="chart-container"></div>
+    <!-- GRAPHIQUES -->
+    <div class="charts-row">
+      <!-- Rendez-vous par jour -->
+      <div class="chart-section full-width">
+        <h2>Rendez-vous par Jour</h2>
+        <div id="appointments-by-day" class="chart-container"></div>
+      </div>
     </div>
 
-    <!-- HEATMAP -->
-    <div class="chart-section">
-      <h2>🔥 Heatmap Temporelle (Créneaux les plus demandés)</h2>
-      <div id="heatmap" class="chart-container"></div>
+    <div class="charts-row">
+      <!-- Rendez-vous par spécialité -->
+      <div class="chart-section">
+        <h2>Rendez-vous par Spécialité</h2>
+        <div id="appointments-by-specialty" class="chart-container"></div>
+      </div>
+
+      <!-- Revenus par spécialité -->
+      <div class="chart-section">
+        <h2>Répartition des Revenus</h2>
+        <div id="revenue-by-specialty" class="chart-container"></div>
+      </div>
     </div>
 
-    <!-- TREEMAP -->
-    <div class="chart-section">
-      <h2>💼 Revenus par Spécialité</h2>
-      <div id="treemap" class="chart-container"></div>
-    </div>
-
-    <!-- NETWORK GRAPH -->
-    <div class="chart-section">
-      <h2>🕸️ Réseau Patients-Docteurs</h2>
-      <p class="chart-description">
-        <span class="legend-doctor">🔵 Docteurs</span>
-        <span class="legend-patient">🟢 Patients</span>
-        <span class="legend-info">Taille = nombre de consultations</span>
-      </p>
-      <div id="network-graph" class="chart-container"></div>
-    </div>
-
-    <!-- TABLEAU SPÉCIALITÉS -->
-    <div class="chart-section">
-      <h2>📋 Détails par Spécialité</h2>
-      <table class="data-table">
-        <thead>
-        <tr>
-          <th>Spécialité</th>
-          <th>Médecins</th>
-          <th>Rendez-vous</th>
-          <th>Revenus (XOF)</th>
-          <th>Prix Consultation</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr *ngFor="let spec of stats.data.specialty_stats">
-          <td><strong>{{ spec.label }}</strong></td>
-          <td>{{ spec.doctor_count }}</td>
-          <td>{{ spec.total_appointments | number }}</td>
-          <td>{{ spec.revenue | number }}</td>
-          <td>{{ spec.prix | number }}</td>
-        </tr>
-        </tbody>
-      </table>
+    <!-- TABLEAU DES SPÉCIALITÉS -->
+    <div class="table-section">
+      <div class="chart-section">
+        <h2>Détails par Spécialité</h2>
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+            <tr>
+              <th>SPÉCIALITÉ</th>
+              <th>MÉDECINS</th>
+              <th>RENDEZ-VOUS</th>
+              <th>PRIX CONSULTATION</th>
+              <th>REVENUS</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr *ngFor="let spec of stats.data.specialty_stats">
+              <td><strong>{{ spec.label }}</strong></td>
+              <td>{{ spec.doctor_count }}</td>
+              <td>{{ spec.total_appointments | number }}</td>
+              <td>{{ spec.prix | number }} FCFA</td>
+              <td><strong>{{ spec.revenue | number }} FCFA</strong></td>
+            </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   </div>
 </div>
