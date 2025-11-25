@@ -20,7 +20,6 @@ class DoctorDashboardController extends Controller
         try {
             $user = Auth::user();
 
-            // Vérifier que l'utilisateur est bien un docteur
             if ($user->role !== 'MEDECIN') {
                 return response()->json(['error' => 'Accès non autorisé'], 403);
             }
@@ -31,26 +30,15 @@ class DoctorDashboardController extends Controller
                 return response()->json(['error' => 'Docteur non trouvé'], 404);
             }
 
-            // Validation des filtres
-            $filter = $request->input('filter', '30'); // Par défaut 30 jours
+            $filter = $request->input('filter', '30');
             $startDate = $this->getStartDate($filter);
 
-            // ========== 1. STATISTIQUES GÉNÉRALES ==========
+            // Statistiques
             $overview = $this->getOverviewStats($doctor, $startDate);
-
-            // ========== 2. RADIAL BAR DATA (Répartition du temps) ==========
             $timeDistribution = $this->getTimeDistribution($doctor, $startDate);
-
-            // ========== 3. STREAM GRAPH DATA (Évolution des pathologies) ==========
             $pathologyTrends = $this->getPathologyTrends($doctor, $startDate);
-
-            // ========== 4. CALENDAR HEATMAP DATA (Taux de remplissage) ==========
             $calendarData = $this->getCalendarHeatmap($doctor, $startDate);
-
-            // ========== 5. RENDEZ-VOUS PAR JOUR ==========
             $appointmentsByDay = $this->getAppointmentsByDay($doctor, $startDate);
-
-            // ========== 6. REVENUS PAR MOIS ==========
             $revenueByMonth = $this->getRevenueByMonth($doctor, $startDate);
 
             return response()->json([
@@ -83,9 +71,6 @@ class DoctorDashboardController extends Controller
         }
     }
 
-    /**
-     * Calculer la date de début selon le filtre
-     */
     private function getStartDate($filter)
     {
         return match($filter) {
@@ -102,22 +87,41 @@ class DoctorDashboardController extends Controller
      */
     private function getOverviewStats($doctor, $startDate)
     {
+        // Patients uniques
         $totalPatients = Appointment::where('doctor_id', $doctor->id)
             ->where('debut_at', '>=', $startDate)
             ->distinct('patient_id')
             ->count('patient_id');
 
+        // Total rendez-vous
         $totalAppointments = Appointment::where('doctor_id', $doctor->id)
             ->where('debut_at', '>=', $startDate)
             ->count();
 
-        $confirmedAppointments = Appointment::where('doctor_id', $doctor->id)
-            ->where('statut', 'CONFIRME')
-            ->where('debut_at', '>=', $startDate)
+        // RDV Aujourd'hui
+        $appointmentsToday = Appointment::where('doctor_id', $doctor->id)
+            ->whereDate('debut_at', Carbon::today())
             ->count();
 
-        $completedAppointments = Appointment::where('doctor_id', $doctor->id)
-            ->where('statut', 'COMPLETE')
+        // Rendez-vous d'aujourd'hui détaillés
+        $todayAppointments = Appointment::where('doctor_id', $doctor->id)
+            ->whereDate('debut_at', Carbon::today())
+            ->with('patient.user')
+            ->orderBy('debut_at')
+            ->get()
+            ->map(function($apt) {
+                return [
+                    'id' => $apt->id,
+                    'time' => Carbon::parse($apt->debut_at)->format('H:i'),
+                    'patient_name' => $apt->patient->user->first_name . ' ' . $apt->patient->user->last_name,
+                    'motif' => $apt->motif ?? 'Consultation',
+                    'status' => $apt->statut
+                ];
+            });
+
+        // Par statut
+        $confirmedAppointments = Appointment::where('doctor_id', $doctor->id)
+            ->where('statut', 'CONFIRME')
             ->where('debut_at', '>=', $startDate)
             ->count();
 
@@ -126,14 +130,21 @@ class DoctorDashboardController extends Controller
             ->where('debut_at', '>=', $startDate)
             ->count();
 
+        $rescheduledAppointments = Appointment::where('doctor_id', $doctor->id)
+            ->where('statut', 'REPORT')
+            ->where('debut_at', '>=', $startDate)
+            ->count();
+
+        // Revenus
         $totalRevenue = Appointment::where('doctor_id', $doctor->id)
             ->where('est_paye', true)
             ->where('debut_at', '>=', $startDate)
             ->sum('prix');
 
-        // Durée moyenne de consultation (en minutes)
+        // Durée moyenne
         $avgDuration = Appointment::where('doctor_id', $doctor->id)
             ->where('debut_at', '>=', $startDate)
+            ->whereNotNull('fin_at')
             ->selectRaw('AVG(TIMESTAMPDIFF(MINUTE, debut_at, fin_at)) as avg_duration')
             ->value('avg_duration');
 
@@ -148,28 +159,33 @@ class DoctorDashboardController extends Controller
         return [
             'total_patients' => $totalPatients,
             'total_appointments' => $totalAppointments,
+            'appointments_today' => $appointmentsToday,
+            'today_appointments' => $todayAppointments,
             'confirmed_appointments' => $confirmedAppointments,
-            'completed_appointments' => $completedAppointments,
             'canceled_appointments' => $canceledAppointments,
-            'cancellation_rate' => $totalAppointments > 0 ? round(($canceledAppointments / $totalAppointments) * 100, 2) : 0,
+            'rescheduled_appointments' => $rescheduledAppointments,
+            'cancellation_rate' => $totalAppointments > 0
+                ? round(($canceledAppointments / $totalAppointments) * 100, 2)
+                : 0,
             'total_revenue' => round($totalRevenue, 2),
-            'avg_duration' => round($avgDuration ?? 0, 2),
+            'avg_duration' => round($avgDuration ?? 0, 0),
             'recurring_patients' => $recurringPatients,
         ];
     }
 
     /**
-     * 2. RÉPARTITION DU TEMPS (Radial Bar)
+     * 2. RÉPARTITION DU TEMPS (PIE CHART)
+     * Statuts: EN ATTENTE, CONFIRME, ANNULE, REPORT
      */
     private function getTimeDistribution($doctor, $startDate)
     {
-        $confirmed = Appointment::where('doctor_id', $doctor->id)
-            ->where('statut', 'CONFIRME')
+        $pending = Appointment::where('doctor_id', $doctor->id)
+            ->where('statut', 'EN ATTENTE')
             ->where('debut_at', '>=', $startDate)
             ->count();
 
-        $completed = Appointment::where('doctor_id', $doctor->id)
-            ->where('statut', 'COMPLETE')
+        $confirmed = Appointment::where('doctor_id', $doctor->id)
+            ->where('statut', 'CONFIRME')
             ->where('debut_at', '>=', $startDate)
             ->count();
 
@@ -178,25 +194,24 @@ class DoctorDashboardController extends Controller
             ->where('debut_at', '>=', $startDate)
             ->count();
 
-        $pending = Appointment::where('doctor_id', $doctor->id)
-            ->where('statut', 'EN ATTENTE')
+        $rescheduled = Appointment::where('doctor_id', $doctor->id)
+            ->where('statut', 'REPORT')
             ->where('debut_at', '>=', $startDate)
             ->count();
 
         return [
             ['label' => 'Confirmés', 'value' => $confirmed],
-            ['label' => 'Complétés', 'value' => $completed],
-            ['label' => 'Annulés', 'value' => $canceled],
             ['label' => 'En Attente', 'value' => $pending],
+            ['label' => 'Annulés', 'value' => $canceled],
+            ['label' => 'Reportés', 'value' => $rescheduled],
         ];
     }
 
     /**
-     * 3. ÉVOLUTION DES PATHOLOGIES (Stream Graph)
+     * 3. ÉVOLUTION DES PATHOLOGIES
      */
     private function getPathologyTrends($doctor, $startDate)
     {
-        // Grouper par mois et motif
         $trends = Appointment::where('doctor_id', $doctor->id)
             ->where('debut_at', '>=', $startDate)
             ->whereNotNull('motif')
@@ -209,21 +224,17 @@ class DoctorDashboardController extends Controller
             ->orderBy('month')
             ->get();
 
-        // Transformer en format exploitable
-        $result = [];
-        foreach ($trends as $trend) {
-            $result[] = [
+        return $trends->map(function($trend) {
+            return [
                 'month' => $trend->month,
                 'motif' => $trend->motif,
                 'count' => $trend->count
             ];
-        }
-
-        return $result;
+        });
     }
 
     /**
-     * 4. CALENDAR HEATMAP (Taux de remplissage)
+     * 4. CALENDAR HEATMAP
      */
     private function getCalendarHeatmap($doctor, $startDate)
     {
@@ -296,7 +307,6 @@ class DoctorDashboardController extends Controller
 
     /**
      * Générer et télécharger le PDF
-     * Route: GET /api/doctor/dashboard/export-pdf
      */
     public function exportPDF(Request $request)
     {
@@ -356,9 +366,6 @@ class DoctorDashboardController extends Controller
         }
     }
 
-    /**
-     * Obtenir le libellé du filtre
-     */
     private function getFilterLabel($filter)
     {
         return match($filter) {
