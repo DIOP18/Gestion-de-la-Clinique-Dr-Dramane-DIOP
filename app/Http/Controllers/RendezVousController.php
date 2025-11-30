@@ -8,6 +8,9 @@ use App\Models\Availability;
 use App\Models\Doctor;
 use App\Models\Patient;
 use App\Models\Payment;
+use App\Notifications\AppointmentCancelledByPatient;
+use App\Notifications\DoctorNewAppointment;
+use App\Notifications\PaymentSuccessful;
 use App\Services\InvoiceService;
 use App\Services\StripePaymentService;
 use Carbon\Carbon;
@@ -85,10 +88,15 @@ class RendezVousController extends Controller
                 'paye_par' => null,
             ]);
 
+            $user->notify(new \App\Notifications\AppointmentCreated($appointment));
+            $doctor->user->notify(new DoctorNewAppointment($appointment));
+
+
+
             DB::commit();
 
             return response()->json([
-                'message' => 'Rendez-vous créé avec succès',
+                'message' => 'Rendez-vous créé avec succès. Un email de confirmation vous a été envoyé',
                 'appointment' => $appointment->load('doctor.specialty', 'patient'),
             ], 201);
 
@@ -236,6 +244,8 @@ class RendezVousController extends Controller
             }
 
             $appointment->update(['statut' => 'ANNULE']);
+            $appointment->doctor->user->notify(new AppointmentCancelledByPatient($appointment));
+
 
             DB::commit();
 
@@ -416,6 +426,9 @@ class RendezVousController extends Controller
                 // Ne pas rollback si le paiement est créé mais pas la facture
                 // On peut régénérer la facture plus tard
             }
+            $appointment->patient->user->notify(
+                new PaymentSuccessful($appointment, $invoice)
+            );
 
             DB::commit();
             \Log::info('STEP 13: Transaction committed successfully');
@@ -451,8 +464,20 @@ class RendezVousController extends Controller
                 return response()->json(['error' => 'Patient non trouvé'], 404);
             }
 
+            $validator = Validator::make($request->all(), [
+                'paye_par' => ['required', 'string', 'in:CARTE,MOBILE_MONEY,ESPECES,VIREMENT']
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'error' => 'Méthode de paiement invalide',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
             DB::beginTransaction();
 
+            // Récupérer le rendez-vous
             $appointment = Appointment::where('id', $id)
                 ->where('patient_id', $patient->id)
                 ->first();
@@ -462,27 +487,21 @@ class RendezVousController extends Controller
                 return response()->json(['error' => 'Rendez-vous non trouvé'], 404);
             }
 
-            if ($appointment->statut !== 'CONFIRME') {
+            // Vérifier le statut
+            if ($appointment->statut !== 'CONFIRME' && $appointment->statut !== 'REPORT') {
                 DB::rollBack();
                 return response()->json([
-                    'error' => 'Vous ne pouvez payer que les rendez-vous confirmés'
+                    'error' => 'Vous ne pouvez payer que les rendez-vous confirmés ou reprogrammés'
                 ], 400);
             }
 
+            // Vérifier si déjà payé
             if ($appointment->est_paye) {
                 DB::rollBack();
                 return response()->json([
-                    'error' => 'Ce rendez-vous est déjà payé'
+                    'error' => 'Ce rendez-vous est déjà payé',
+                    'paye_par' => $appointment->paye_par
                 ], 400);
-            }
-
-            $validator = Validator::make($request->all(), [
-                'paye_par' => ['required', 'string', 'in:ESPECES,CARTE,MOBILE_MONEY,VIREMENT']
-            ]);
-
-            if ($validator->fails()) {
-                DB::rollBack();
-                return response()->json(['errors' => $validator->errors()], 422);
             }
 
             $appointment->update([
@@ -490,9 +509,9 @@ class RendezVousController extends Controller
                 'paye_par' => $request->paye_par
             ]);
 
-            // Enregistrer dans payments (pour méthodes non-Stripe)
             Payment::create([
                 'rendez_vous_id' => $appointment->id,
+                'patient_id' => $patient->id,
                 'amount' => $appointment->prix,
                 'currency' => 'XOF',
                 'provider' => $request->paye_par,
@@ -502,20 +521,42 @@ class RendezVousController extends Controller
 
             DB::commit();
 
+            $appointment->refresh();
+            $appointment->load('doctor.user', 'doctor.specialty');
+
+            $messages = [
+                'CARTE' => 'Paiement par carte bancaire effectué avec succès',
+                'MOBILE_MONEY' => 'Paiement Mobile Money enregistré.',
+                'ESPECES' => 'Paiement en espèces enregistré.',
+                'VIREMENT' => 'Paiement par virement enregistré. '
+            ];
+
             return response()->json([
-                'message' => 'Paiement effectué avec succès',
-                'appointment' => $appointment->load('doctor.user', 'doctor.specialty')
+                'success' => true,
+                'message' => $messages[$request->paye_par] ?? 'Paiement enregistré avec succès',
+                'appointment' => [
+                    'id' => $appointment->id,
+                    'est_paye' => $appointment->est_paye,
+                    'paye_par' => $appointment->paye_par,
+                    'prix' => $appointment->prix,
+                    'doctor_name' => 'Dr. ' . $appointment->doctor->user->first_name . ' ' . $appointment->doctor->user->last_name,
+                    'date' => $appointment->debut_at->format('d/m/Y'),
+                    'heure' => $appointment->debut_at->format('H:i'),
+                ]
             ], 200);
 
         } catch (\Exception $e) {
             DB::rollBack();
+
+            \Log::error('Payment Error: ' . $e->getMessage());
+            \Log::error('Stack trace: ' . $e->getTraceAsString());
+
             return response()->json([
                 'error' => 'Erreur lors du paiement',
                 'details' => $e->getMessage()
             ], 500);
         }
-    }
-    /**
+    }   /**
      * ✅ Télécharge la facture d'un rendez-vous
      */
     public function downloadInvoice($id)

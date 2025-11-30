@@ -28,12 +28,19 @@ class Appointment extends Model
         'prix',
         'paye_par',
         'est_paye',
+        'nombre_reprogrammations',
+        'derniere_reprogrammation_at',
+        'reprogramme_par_type',
+        'reprogramme_par_user_id',
+        'raison_reprogrammation',
     ];
 
     protected $casts = [
         'est_paye' => 'boolean',
         'debut_at' => 'datetime',
         'fin_at' => 'datetime',
+        'derniere_reprogrammation_at' => 'datetime',
+
     ];
 
     public function doctor(): BelongsTo
@@ -65,7 +72,11 @@ class Appointment extends Model
     {
         return $this->hasOne(Invoice::class, 'rendez_vous_id');
     }
-
+    const STATUT_EN_ATTENTE = 'EN ATTENTE';
+    const STATUT_CONFIRME = 'CONFIRME';
+    const STATUT_COMPLETE = 'COMPLETE';
+    const STATUT_ANNULE = 'ANNULE';
+    const STATUT_REPORT = 'REPORT';
 }
 
 

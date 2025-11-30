@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Appointment;
 use App\Models\Availability;
 use App\Models\Doctor;
+use App\Notifications\AppointmentCancelledByDoctor;
+use App\Notifications\AppointmentConfirmedByDoctor;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -165,6 +167,9 @@ class DoctorController extends Controller
             }
 
             $appointment->update(['statut' => 'CONFIRME']);
+            $appointment->patient->user->notify(
+                new AppointmentConfirmedByDoctor($appointment)
+            );
 
             return response()->json([
                 'message' => 'Rendez-vous confirmé avec succès',
@@ -182,7 +187,7 @@ class DoctorController extends Controller
     /**
      * Annuler un rendez-vous
      */
-    public function cancelAppointment($id)
+    public function cancelAppointment(Request $request,$id)
     {
         try {
             $user = Auth::user();
@@ -213,6 +218,10 @@ class DoctorController extends Controller
             }
 
             $appointment->update(['statut' => 'ANNULE']);
+
+            $appointment->patient->user->notify(
+                new AppointmentCancelledByDoctor($appointment, $request->reason)
+            );
 
             DB::commit();
 

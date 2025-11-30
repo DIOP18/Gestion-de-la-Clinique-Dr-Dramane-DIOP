@@ -131,7 +131,10 @@ Route::middleware(['auth:sanctum','check.blocked', 'role:ASSISTANT'])->group(fun
     // Assistant: statistiques de ses rendez-vous
     Route::get('/assistant/dashboard/stats', [AssistantDashboardController::class, 'getStats']);
     Route::patch('/assistant/appointments/{id}/update-time', [AssistantDashboardController::class, 'updateAppointmentTime']);
-    Route::get('/assistant/dashboard/export-pdf', [AssistantDashboardController::class, 'exportPDF']); // ← NOUVELLE ROUTE
+    Route::get('/assistant/dashboard/export-pdf', [AssistantDashboardController::class, 'exportPDF']);
+    Route::get('/assistant/availabilities-for-reschedule', [AssistantController::class, 'getAvailabilitiesForReschedule']);
+    Route::post('/assistant/appointments/{id}/reschedule', [AssistantController::class, 'rescheduleAppointment']);
+    Route::get('/assistant/doctors', [AssistantController::class, 'getDoctors']);
 
 });
 
