@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import {HttpClient, HttpParams} from '@angular/common/http';
 import { Observable } from 'rxjs';
 import {environment} from '../../environments/environment';
 
@@ -37,6 +37,21 @@ export interface RendezVous {
   note_medecin?: string;
   cree_par_type?: string;
 }
+export interface CalendarAvailability {
+  id: number;
+  doctor_id: number;
+  doctor_name: string;
+  specialty: string;
+  specialty_id: number;
+  date: string;
+  heure_debut: string;
+  heure_fin: string;
+  title: string;
+  start: string;
+  end: string;
+  backgroundColor: string;
+  borderColor: string;
+}
 
 export interface Specialty {
   id: number;
@@ -67,6 +82,26 @@ export class AssistantService {
   }
   getSpecialties(): Observable<any[]> {
     return this.http.get<any[]>(`${this.apiUrl}/specialite`);
+  }
+  getAvailabilitiesForReschedule(doctorId?: number, specialtyId?: number): Observable<CalendarAvailability[]> {
+    let params = new HttpParams();
+    if (doctorId) params = params.set('doctor_id', doctorId.toString());
+    if (specialtyId) params = params.set('specialty_id', specialtyId.toString());
+
+    return this.http.get<CalendarAvailability[]>(`${this.apiUrl}/availabilities-for-reschedule`, { params });
+  }
+
+// Méthode pour reprogrammer un RDV
+  rescheduleAppointment(appointmentId: number, newAvailabilityId: number, reason?: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/appointments/${appointmentId}/reschedule`, {
+      new_availability_id: newAvailabilityId,
+      reason: reason
+    });
+  }
+
+// Méthode pour récupérer tous les médecins
+  getDoctors(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/doctors`);
   }
 
 

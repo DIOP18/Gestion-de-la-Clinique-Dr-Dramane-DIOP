@@ -302,31 +302,56 @@ export class RsvPatientComponent implements OnInit {
   }
 
   processNonStripePayment(): void {
-    if (!this.selectedAppointment) return;
+    if (!this.selectedAppointment) {
+      return;
+    }
+
+    console.log('🔄 Envoi paiement:', {
+      appointment_id: this.selectedAppointment.id,
+      paye_par: this.paymentMethod
+    });
 
     this.paymentStep = 'processing';
     this.paymentError = '';
 
     this.appointmentService.payAppointment(
       this.selectedAppointment.id,
-      { paye_par: this.paymentMethod as any }
+      {
+        paye_par: 'CARTE'
+      }
     ).subscribe({
       next: (response) => {
-        this.paymentStep = 'success';
-        this.successMessage = response.message;
+        console.log(' Paiement réussi:', response);
 
+        this.paymentStep = 'success';
+        this.successMessage = response.message || 'Paiement enregistré avec succès';
+
+        // Recharger les rendez-vous après 2 secondes
         setTimeout(() => {
           this.loadAppointments();
           this.closePaymentModal();
         }, 2000);
       },
       error: (error) => {
-        this.paymentError = error.error?.error || 'Erreur lors du paiement';
-        this.paymentStep = 'init';
+        console.error(' Erreur paiement:', error);
+        console.error('Détails:', error.error);
+
+
+        // Afficher le message d'erreur approprié
+        if (error.error?.error) {
+          this.paymentError = error.error.error;
+        } else if (error.error?.errors) {
+          // Erreurs de validation
+          const validationErrors = Object.values(error.error.errors).flat();
+          this.paymentError = validationErrors.join(', ');
+        } else if (error.error?.message) {
+          this.paymentError = error.error.message;
+        } else {
+          this.paymentError = 'Erreur lors du paiement. Veuillez réessayer.';
+        }
       }
     });
   }
-
   /**
    * ✅ MODIFIÉ - Vérifie si on peut annuler
    */
@@ -356,7 +381,7 @@ export class RsvPatientComponent implements OnInit {
    * ✅ MODIFIÉ - Vérifie si une facture est disponible
    */
   hasInvoice(appointment: Appointment): boolean {
-    const isPaid = !!appointment.est_paye;
+    const isPaid = appointment.est_paye;
     const hasInvoiceData = !!appointment.invoice;
 
     console.log(`hasInvoice for appointment ${appointment.id}:`, {

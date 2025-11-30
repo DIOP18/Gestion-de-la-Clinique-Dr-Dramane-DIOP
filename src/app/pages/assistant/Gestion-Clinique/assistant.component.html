@@ -132,7 +132,7 @@
 
   <!-- Contenu des onglets -->
   <div class="tab-content">
-    <!-- Onglet Disponibilités (Tableau) -->
+    <!-- Onglet Disponibilités -->
     <div *ngIf="activeTab === 'disponibilites'" class="disponibilites-table-wrapper">
       <div *ngIf="filteredDisponibilites.length === 0" class="empty-state">
         <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -175,8 +175,7 @@
       </table>
     </div>
 
-    <!-- Onglet Rendez-vous (Cards) -->
-    <!-- Onglet Rendez-vous (Tableau) -->
+    <!-- Onglet Rendez-vous -->
     <div *ngIf="activeTab === 'rendez-vous'" class="rendez-vous-table-wrapper">
       <div *ngIf="filteredRendezVous.length === 0" class="empty-state">
         <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -198,7 +197,7 @@
           <th>Horaire</th>
           <th>Motif</th>
           <th>Paiement</th>
-          <th>Action</th>
+          <th>Actions</th>
         </tr>
         </thead>
         <tbody>
@@ -252,14 +251,28 @@
               <span class="price">{{ rdv.prix }} FCFA</span>
             </div>
           </td>
+          <!-- ✅ CORRECTION ICI - UN SEUL <td> avec les deux boutons -->
           <td>
-            <button class="btn-view" (click)="openDetailsModal(rdv)">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                <circle cx="12" cy="12" r="3"/>
-              </svg>
-              Voir
-            </button>
+            <div class="action-buttons">
+              <button class="btn-view" (click)="openDetailsModal(rdv)" title="Voir les détails">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+                Voir
+              </button>
+
+              <button
+                *ngIf="rdv.statut === 'CONFIRME' || rdv.statut === 'REPORT'"
+                class="btn-reschedule"
+                (click)="openRescheduleModal(rdv)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <polyline points="23 4 23 10 17 10"/>
+                  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                </svg>
+                Report
+              </button>
+            </div>
           </td>
         </tr>
         </tbody>
@@ -267,7 +280,6 @@
     </div>
   </div>
 </div>
-
 
 <!-- Modal Détails Rendez-vous -->
 <div *ngIf="showDetailsModal && selectedRendezVous" class="modal-overlay" (click)="closeDetailsModal()">
@@ -425,6 +437,140 @@
 
     <div class="modal-footer">
       <button class="btn btn-secondary" (click)="closeDetailsModal()">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de reprogrammation -->
+<div *ngIf="showRescheduleModal && appointmentToReschedule" class="modal-overlay" (click)="closeRescheduleModal()">
+  <div class="modal-content modal-reschedule" (click)="$event.stopPropagation()">
+    <!-- Header -->
+    <div class="modal-header">
+      <div>
+        <h3>🔄 Reprogrammer le rendez-vous</h3>
+        <p class="modal-subtitle">
+          Patient: <strong>{{ appointmentToReschedule.patient_name }}</strong> •
+          RDV actuel: {{ appointmentToReschedule.date }} à {{ appointmentToReschedule.heure_debut }}
+        </p>
+      </div>
+      <button class="btn-close" (click)="closeRescheduleModal()">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Body -->
+    <div class="modal-body">
+      <!-- Filtres -->
+      <div class="reschedule-filters">
+        <div class="filter-group">
+          <label>Filtrer par médecin</label>
+          <select
+            [(ngModel)]="rescheduleFilters.selectedDoctor"
+            (ngModelChange)="applyRescheduleFilters()"
+            class="filter-select"
+          >
+            <option value="">Tous les médecins</option>
+            <option *ngFor="let doctor of doctors" [value]="doctor.id">
+              {{ doctor.name }} - {{ doctor.specialty }}
+            </option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label>Filtrer par spécialité</label>
+          <select
+            [(ngModel)]="rescheduleFilters.selectedSpecialty"
+            (ngModelChange)="applyRescheduleFilters()"
+            class="filter-select"
+          >
+            <option value="">Toutes les spécialités</option>
+            <option *ngFor="let specialty of specialties" [value]="specialty.id">
+              {{ specialty.label }}
+            </option>
+          </select>
+        </div>
+
+        <button class="btn-reset-small" (click)="resetRescheduleFilters()" title="Réinitialiser les filtres">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <polyline points="23 4 23 10 17 10"/>
+            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Calendrier -->
+      <div class="calendar-wrapper">
+        <div *ngIf="isLoadingCalendar" class="calendar-loading">
+          <div class="spinner"></div>
+          <p>Chargement des disponibilités...</p>
+        </div>
+
+        <full-calendar
+          *ngIf="!isLoadingCalendar"
+          [options]="calendarOptions"
+        ></full-calendar>
+      </div>
+
+      <!-- Créneau sélectionné -->
+      <div *ngIf="selectedNewSlot" class="selected-slot-info">
+        <div class="selected-slot-header">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+          </svg>
+          <span>Nouveau créneau sélectionné</span>
+        </div>
+        <div class="selected-slot-details">
+          <p><strong>Date:</strong> {{ formatDate(selectedNewSlot.start) }}</p>
+          <p><strong>Horaire:</strong> {{ formatTime(selectedNewSlot.start) }} - {{ formatTime(selectedNewSlot.end) }}</p>
+          <p><strong>Médecin:</strong> {{ selectedNewSlot.title }}</p>
+        </div>
+      </div>
+
+      <!-- Raison (optionnelle) -->
+      <div class="form-group">
+        <label for="reschedule-reason">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+          </svg>
+          Raison de la reprogrammation (optionnel)
+        </label>
+        <textarea
+          id="reschedule-reason"
+          [(ngModel)]="rescheduleReason"
+          placeholder="Ex: Indisponibilité du médecin, demande du patient, urgence..."
+          rows="3"
+          maxlength="500"
+          class="form-textarea"
+        ></textarea>
+        <small>{{ rescheduleReason.length }}/500 caractères</small>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="modal-footer">
+      <button
+        class="btn btn-secondary"
+        (click)="closeRescheduleModal()"
+        [disabled]="isSubmittingReschedule"
+      >
+        Annuler
+      </button>
+      <button
+        class="btn btn-primary"
+        (click)="confirmReschedule()"
+        [disabled]="!selectedNewSlot || isSubmittingReschedule"
+      >
+        <span *ngIf="!isSubmittingReschedule">✅ Confirmer la reprogrammation</span>
+        <span *ngIf="isSubmittingReschedule">
+          <div class="spinner-small"></div>
+          Reprogrammation en cours...
+        </span>
+      </button>
     </div>
   </div>
 </div>

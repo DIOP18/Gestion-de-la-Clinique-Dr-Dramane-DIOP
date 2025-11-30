@@ -20,6 +20,8 @@ export interface Appointment {
   note_medecin: string | null;
   cree_par_type?: string;
   invoice?: Invoice;
+  statut_label: string;  // 🆕 Ajouté
+
 }
 export interface Invoice {
   id: number;

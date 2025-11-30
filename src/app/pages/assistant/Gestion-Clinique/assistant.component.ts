@@ -2,14 +2,21 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
-import { AssistantService, Disponibilite, RendezVous, Specialty } from '../../../services/assistant.service';
+import { FullCalendarModule } from '@fullcalendar/angular';
+import { CalendarOptions, EventClickArg } from '@fullcalendar/core';
+import dayGridPlugin from '@fullcalendar/daygrid';
+import timeGridPlugin from '@fullcalendar/timegrid';
+import interactionPlugin from '@fullcalendar/interaction';
+import frLocale from '@fullcalendar/core/locales/fr';
+import { AssistantService, Disponibilite, RendezVous, Specialty, CalendarAvailability } from '../../../services/assistant.service';
 
 @Component({
   selector: 'app-assistant',
   standalone: true,
   imports: [
     CommonModule,
-    FormsModule
+    FormsModule,
+    FullCalendarModule
   ],
   templateUrl: './assistant.component.html',
   styleUrls: ['./assistant.component.scss']
@@ -42,9 +49,57 @@ export class AssistantComponent implements OnInit {
   // Spécialités
   specialties: Specialty[] = [];
 
-  // Modal
+  // Modal détails
   showDetailsModal = false;
   selectedRendezVous: RendezVous | null = null;
+
+  // 🆕 Modal de reprogrammation
+  showRescheduleModal = false;
+  appointmentToReschedule: RendezVous | null = null;
+  rescheduleReason = '';
+  isLoadingCalendar = false;
+  isSubmittingReschedule = false;
+  selectedNewSlot: any = null;
+
+  // 🆕 Liste des médecins pour les filtres du modal
+  doctors: any[] = [];
+  rescheduleFilters = {
+    selectedDoctor: '',
+    selectedSpecialty: ''
+  };
+
+  // 🆕 Options du calendrier FullCalendar
+  calendarOptions: CalendarOptions = {
+    plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
+    initialView: 'timeGridWeek',
+    locale: frLocale,
+    headerToolbar: {
+      left: 'prev,next today',
+      center: 'title',
+      right: 'dayGridMonth,timeGridWeek'
+    },
+    buttonText: {
+      today: "Aujourd'hui",
+      month: 'Mois',
+      week: 'Semaine'
+    },
+    events: [],
+    eventClick: this.handleCalendarEventClick.bind(this),
+    height: 'auto',
+    slotMinTime: '08:00:00',
+    slotMaxTime: '19:00:00',
+    allDaySlot: false,
+    eventTimeFormat: {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    },
+    displayEventTime: true,
+    displayEventEnd: true,
+    eventDisplay: 'block',
+    slotDuration: '00:30:00',
+    expandRows: true
+  };
 
   constructor(private assistantService: AssistantService) {}
 
@@ -57,12 +112,12 @@ export class AssistantComponent implements OnInit {
 
     forkJoin({
       globalView: this.assistantService.getGlobalView(),
-      specialties: this.assistantService.getSpecialties()
+      specialties: this.assistantService.getSpecialties(),
+      doctors: this.assistantService.getDoctors()
     }).subscribe({
       next: (response) => {
         console.log('Données complètes reçues:', response);
 
-        // IMPORTANT : Utiliser les vraies clés du backend
         this.disponibilites = response.globalView.availability || [];
         this.rendezVous = response.globalView.appointment || [];
         this.stats = response.globalView.stats || {
@@ -71,16 +126,18 @@ export class AssistantComponent implements OnInit {
         };
 
         this.specialties = response.specialties || [];
+        this.doctors = response.doctors || [];
 
         console.log('📅 Disponibilités chargées:', this.disponibilites.length);
         console.log('📋 Rendez-vous chargés:', this.rendezVous.length);
         console.log('🏥 Spécialités chargées:', this.specialties.length);
+        console.log('👨‍⚕️ Médecins chargés:', this.doctors.length);
 
         this.applyFilters();
         this.loading = false;
       },
       error: (error) => {
-        console.error(' Erreur chargement:', error);
+        console.error('❌ Erreur chargement:', error);
         console.error('Détails:', error.error);
         this.loading = false;
       }
@@ -145,5 +202,182 @@ export class AssistantComponent implements OnInit {
   closeDetailsModal(): void {
     this.showDetailsModal = false;
     this.selectedRendezVous = null;
+  }
+
+  // 🆕 Vérifier si le RDV peut être reprogrammé
+  canReschedule(appointment: RendezVous): boolean {
+    return appointment.statut === 'CONFIRME';
+  }
+
+  // 🆕 Ouvrir le modal de reprogrammation
+  openRescheduleModal(appointment: RendezVous): void {
+    this.appointmentToReschedule = appointment;
+    this.showRescheduleModal = true;
+    this.rescheduleReason = '';
+    this.selectedNewSlot = null;
+    this.rescheduleFilters = {
+      selectedDoctor: '',
+      selectedSpecialty: ''
+    };
+
+    // Charger les disponibilités pour le calendrier
+    this.loadAvailabilitiesForCalendar();
+  }
+
+  // 🆕 Fermer le modal de reprogrammation
+  closeRescheduleModal(): void {
+    this.showRescheduleModal = false;
+    this.appointmentToReschedule = null;
+    this.rescheduleReason = '';
+    this.selectedNewSlot = null;
+    this.rescheduleFilters = {
+      selectedDoctor: '',
+      selectedSpecialty: ''
+    };
+  }
+
+  // 🆕 Charger les disponibilités pour le calendrier
+// 🆕 Charger les disponibilités pour le calendrier
+  loadAvailabilitiesForCalendar(): void {
+    this.isLoadingCalendar = true;
+
+    const doctorId = this.rescheduleFilters.selectedDoctor ? parseInt(this.rescheduleFilters.selectedDoctor) : undefined;
+    const specialtyId = this.rescheduleFilters.selectedSpecialty ? parseInt(this.rescheduleFilters.selectedSpecialty) : undefined;
+
+    this.assistantService.getAvailabilitiesForReschedule(doctorId, specialtyId).subscribe({
+      next: (availabilities: CalendarAvailability[]) => {
+        console.log('Disponibilités chargées pour calendrier:', availabilities.length);
+
+        const calendarEvents = availabilities.map(avail => ({
+          id: avail.id.toString(),
+          title: avail.doctor_name,
+          start: avail.start,
+          end: avail.end,
+          backgroundColor: avail.backgroundColor,
+          borderColor: avail.borderColor,
+          extendedProps: {
+            doctor_id: avail.doctor_id,
+            specialty: avail.specialty,
+            specialty_id: avail.specialty_id,
+            heure_debut: avail.heure_debut,
+            heure_fin: avail.heure_fin
+          }
+        }));
+
+        // Mettre à jour les événements du calendrier
+        this.calendarOptions = {
+          ...this.calendarOptions,
+          events: calendarEvents
+        };
+
+        this.isLoadingCalendar = false;
+      },
+      error: (error) => {
+        console.error('❌ Erreur chargement disponibilités calendrier:', error);
+        alert('Erreur lors du chargement des disponibilités');
+        this.isLoadingCalendar = false;
+      }
+    });
+  }
+  // 🆕 Appliquer les filtres du modal de reprogrammation
+  applyRescheduleFilters(): void {
+    console.log('🔍 Filtres reprogrammation:', this.rescheduleFilters);
+    this.loadAvailabilitiesForCalendar();
+  }
+
+  // 🆕 Réinitialiser les filtres du modal
+  resetRescheduleFilters(): void {
+    this.rescheduleFilters = {
+      selectedDoctor: '',
+      selectedSpecialty: ''
+    };
+    this.loadAvailabilitiesForCalendar();
+  }
+
+  // 🆕 Gérer le clic sur un événement du calendrier
+  handleCalendarEventClick(clickInfo: EventClickArg): void {
+    const event = clickInfo.event;
+
+    this.selectedNewSlot = {
+      id: event.id,
+      title: event.title,
+      start: event.start,
+      end: event.end,
+      extendedProps: event.extendedProps
+    };
+
+    console.log('🎯 Créneau sélectionné:', this.selectedNewSlot);
+  }
+
+  // 🆕 Confirmer la reprogrammation
+  confirmReschedule(): void {
+    if (!this.selectedNewSlot) {
+      alert('⚠️ Veuillez sélectionner un nouveau créneau sur le calendrier');
+      return;
+    }
+
+    if (!this.appointmentToReschedule) {
+      alert('❌ Erreur : rendez-vous introuvable');
+      return;
+    }
+
+    const confirmMessage = `Confirmer la reprogrammation ?\n\n` +
+      `Ancien RDV : ${this.appointmentToReschedule.date} à ${this.appointmentToReschedule.heure_debut}\n` +
+      `Nouveau RDV : ${this.formatDate(this.selectedNewSlot.start)} à ${this.formatTime(this.selectedNewSlot.start)}\n\n` +
+      `Le patient sera notifié par email.`;
+
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    this.isSubmittingReschedule = true;
+
+    this.assistantService.rescheduleAppointment(
+      this.appointmentToReschedule.id,
+      parseInt(this.selectedNewSlot.id),
+      this.rescheduleReason.trim() || undefined
+    ).subscribe({
+      next: (response) => {
+        console.log('✅ RDV reprogrammé:', response);
+        alert('✅ Rendez-vous reprogrammé avec succès ! Le patient et le médecin ont été notifiés par email.');
+
+        this.closeRescheduleModal();
+        this.loadData(); // Recharger les données
+        this.isSubmittingReschedule = false;
+      },
+      error: (error) => {
+        console.error('❌ Erreur reprogrammation:', error);
+
+        let errorMessage = 'Erreur lors de la reprogrammation';
+        if (error.error?.error) {
+          errorMessage = error.error.error;
+        } else if (error.error?.message) {
+          errorMessage = error.error.message;
+        }
+
+        alert(`❌ ${errorMessage}`);
+        this.isSubmittingReschedule = false;
+      }
+    });
+  }
+
+  // 🆕 Formater la date
+  formatDate(date: Date | null): string {
+    if (!date) return '';
+    return new Date(date).toLocaleDateString('fr-FR', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+  }
+
+  // 🆕 Formater l'heure
+  formatTime(date: Date | null): string {
+    if (!date) return '';
+    return new Date(date).toLocaleTimeString('fr-FR', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   }
 }
