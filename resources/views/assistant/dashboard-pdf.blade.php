@@ -107,17 +107,24 @@
             padding: 12px;
             border-top: 1px solid #e0e0e0;
         }
+        h1 {
+            font-size: 32px;
+            text-align: center;
+            font-weight: 800;
+            margin-bottom: 25px;
+            color: #1a237e;
+            background: linear-gradient(90deg, #1565c0, #1a237e);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 0 3px 8px rgba(21, 101, 192, 0.2);
+        }
     </style>
 </head>
 <body>
-<div class="header">
-    <h1>Rapport Assistance</h1>
-    <p>Assistant: {{ $assistant_name }}</p>
-    <p>Date: {{ $date }}</p>
-    <p style="margin-top: 8px;">Généré le {{ $generated_at }}</p>
-</div>
+    <h1>MES statistiques assistant</h1>
 
-<!-- STATISTIQUES GÉNÉRALES -->
 <div class="section">
     <h2>Vue d'ensemble du jour</h2>
     <div class="stats-row">

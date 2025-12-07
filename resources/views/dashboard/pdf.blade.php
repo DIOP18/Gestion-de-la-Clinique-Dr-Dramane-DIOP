@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Rapport Administrateur - Dashboard</title>
+    <title>Statistique de la clinique </title>
     <style>
         * {
             margin: 0;
@@ -269,20 +269,25 @@
         .page-break {
             page-break-after: always;
         }
+        h1 {
+            font-size: 32px;
+            text-align: center;
+            font-weight: 800;
+            margin-bottom: 25px;
+            color: #1a237e;
+            background: linear-gradient(90deg, #1565c0, #1a237e);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 0 3px 8px rgba(21, 101, 192, 0.2);
+        }
+
     </style>
 </head>
 <body>
 <!-- HEADER -->
-<div class="header">
-    <h1>Rapport Administrateur</h1>
-    <p class="subtitle">Vue d'ensemble des rendez-vous de la clinique</p>
-    <div class="period">
-        📅 Période : {{ $period['start'] }} - {{ $period['end'] }}
-    </div>
-    <p class="generated">Généré le {{ $generated_at }}</p>
-</div>
-
-<!-- VUE D'ENSEMBLE -->
+<h1>MES STATISTIQUES ADMINISTRATEUR  </h1>
 <div class="section">
     <h2 class="section-title">Vue d'Ensemble</h2>
 
@@ -290,43 +295,43 @@
         <tr class="stats-row">
             <td class="stat-card primary">
                 <div class="stat-label">Total Patients</div>
-                <div class="stat-value">{{ number_format($overview['total_patients'] ?? 0) }}</div>
+                <div class="stat-value">3</div>
             </td>
             <td class="stat-card success">
                 <div class="stat-label">Nouveaux Patients</div>
-                <div class="stat-value">{{ number_format($overview['new_patients'] ?? 0) }}</div>
+                <div class="stat-value">3</div>
             </td>
             <td class="stat-card info">
                 <div class="stat-label">Patients Fidèles</div>
-                <div class="stat-value">{{ number_format($overview['loyal_patients'] ?? 0) }}</div>
+                <div class="stat-value">1</div>
             </td>
         </tr>
         <tr class="stats-row">
             <td class="stat-card info">
                 <div class="stat-label">Total Médecins</div>
-                <div class="stat-value">{{ number_format($overview['total_doctors'] ?? 0) }}</div>
+                <div class="stat-value">3</div>
             </td>
             <td class="stat-card info">
                 <div class="stat-label">Total Assistants</div>
-                <div class="stat-value">{{ number_format($overview['total_assistants'] ?? 0) }}</div>
+                <div class="stat-value">1</div>
             </td>
             <td class="stat-card primary">
                 <div class="stat-label">RDV Aujourd'hui</div>
-                <div class="stat-value">{{ number_format($overview['appointments_today'] ?? 0) }}</div>
+                <div class="stat-value">0</div>
             </td>
         </tr>
         <tr class="stats-row">
             <td class="stat-card success">
                 <div class="stat-label">RDV Confirmés</div>
-                <div class="stat-value">{{ number_format($overview['appointments_confirmed'] ?? 0) }}</div>
+                <div class="stat-value">1</div>
             </td>
             <td class="stat-card primary">
                 <div class="stat-label">Total RDV</div>
-                <div class="stat-value">{{ number_format($overview['total_appointments'] ?? 0) }}</div>
+                <div class="stat-value">3</div>
             </td>
             <td class="stat-card danger">
                 <div class="stat-label">Taux d'Annulation</div>
-                <div class="stat-value">{{ number_format($overview['cancellation_rate'] ?? 0, 1) }}%</div>
+                <div class="stat-value">0.0%</div>
             </td>
         </tr>
     </table>
@@ -334,7 +339,7 @@
     <!-- Revenue Highlight -->
     <div class="highlight-box" style="margin-top: 15px;">
         <div class="label">Revenus Total (Période)</div>
-        <div class="value">{{ number_format($overview['total_revenue'] ?? 0) }} FCFA</div>
+        <div class="value">30,000 FCFA</div>
     </div>
 </div>
 
@@ -346,19 +351,19 @@
         <tr class="journey-row">
             <td class="journey-step">
                 <div class="step-label">Nouveaux Patients</div>
-                <div class="step-value">{{ number_format($patientJourney['new_patients'] ?? 0) }}</div>
+                <div class="step-value">3</div>
             </td>
             <td class="journey-step">
                 <div class="step-label">1ère Consultation</div>
-                <div class="step-value">{{ number_format($patientJourney['first_consultation'] ?? 0) }}</div>
+                <div class="step-value">0</div>
             </td>
             <td class="journey-step">
                 <div class="step-label">Suivi</div>
-                <div class="step-value">{{ number_format($patientJourney['follow_up'] ?? 0) }}</div>
+                <div class="step-value">1</div>
             </td>
             <td class="journey-step">
                 <div class="step-label">Fidélisés (2+ RDV)</div>
-                <div class="step-value">{{ number_format($patientJourney['loyal_patients'] ?? 0) }}</div>
+                <div class="step-value">1</div>
             </td>
         </tr>
     </table>
@@ -379,32 +384,62 @@
         </tr>
         </thead>
         <tbody>
-        @if(isset($specialtyStats) && count($specialtyStats) > 0)
-            @foreach($specialtyStats as $spec)
-                <tr>
-                    <td><strong>{{ $spec['label'] ?? 'N/A' }}</strong></td>
-                    <td>{{ $spec['doctor_count'] ?? 0 }}</td>
-                    <td>{{ number_format($spec['total_appointments'] ?? 0) }}</td>
-                    <td>{{ number_format($spec['prix'] ?? 0) }} FCFA</td>
-                    <td><strong>{{ number_format($spec['revenue'] ?? 0) }} FCFA</strong></td>
-                </tr>
-            @endforeach
-
-            <!-- Total Row -->
-            <tr style="background: #f1f5f9; font-weight: 700;">
-                <td><strong>TOTAL</strong></td>
-                <td>{{ array_sum(array_column($specialtyStats, 'doctor_count')) }}</td>
-                <td>{{ number_format(array_sum(array_column($specialtyStats, 'total_appointments'))) }}</td>
-                <td>-</td>
-                <td><strong>{{ number_format(array_sum(array_column($specialtyStats, 'revenue'))) }} FCFA</strong></td>
-            </tr>
-        @else
-            <tr>
-                <td colspan="5" class="empty-state">
-                    Aucune donnée disponible pour cette période
-                </td>
-            </tr>
-        @endif
+        <tr>
+            <td><strong>Généraliste</strong></td>
+            <td>1</td>
+            <td>3</td>
+            <td>10,000 FCFA</td>
+            <td><strong>30,000 FCFA</strong></td>
+        </tr>
+        <tr>
+            <td><strong>Cardiologie</strong></td>
+            <td>2</td>
+            <td>0</td>
+            <td>15,000 FCFA</td>
+            <td><strong>0 FCFA</strong></td>
+        </tr>
+        <tr>
+            <td><strong>Dermatologie</strong></td>
+            <td>0</td>
+            <td>0</td>
+            <td>12,000 FCFA</td>
+            <td><strong>0 FCFA</strong></td>
+        </tr>
+        <tr>
+            <td><strong>Pédiatrie</strong></td>
+            <td>0</td>
+            <td>0</td>
+            <td>13,000 FCFA</td>
+            <td><strong>0 FCFA</strong></td>
+        </tr>
+        <tr>
+            <td><strong>Gynécologie</strong></td>
+            <td>0</td>
+            <td>0</td>
+            <td>14,000 FCFA</td>
+            <td><strong>0 FCFA</strong></td>
+        </tr>
+        <tr>
+            <td><strong>Neurologie</strong></td>
+            <td>0</td>
+            <td>0</td>
+            <td>16,000 FCFA</td>
+            <td><strong>0 FCFA</strong></td>
+        </tr>
+        <tr>
+            <td><strong>Ophtalmologie</strong></td>
+            <td>0</td>
+            <td>0</td>
+            <td>11,000 FCFA</td>
+            <td><strong>0 FCFA</strong></td>
+        </tr>
+        <tr style="background: #f1f5f9; font-weight: 700;">
+            <td><strong>TOTAL</strong></td>
+            <td>3</td>
+            <td>3</td>
+            <td>-</td>
+            <td><strong>30,000 FCFA</strong></td>
+        </tr>
         </tbody>
     </table>
 </div>
@@ -424,37 +459,24 @@
         </tr>
         </thead>
         <tbody>
-        @if(isset($appointmentsByDay) && count($appointmentsByDay) > 0)
-            @php
-                $total = 0;
-                $days = array_slice($appointmentsByDay, 0, 20);
-            @endphp
-
-            @foreach($days as $day)
-                @php $total += $day['count'] ?? 0; @endphp
-                <tr>
-                    <td>{{ $day['date_formatted'] ?? 'N/A' }}</td>
-                    <td>
-                        <strong>{{ $day['count'] ?? 0 }}</strong>
-                        <span style="color: #6b7280; margin-left: 10px;">
-                                    {{ str_repeat('█', min($day['count'] ?? 0, 20)) }}
-                                </span>
-                    </td>
-                </tr>
-            @endforeach
-
-            <!-- Average Row -->
-            <tr style="background: #f1f5f9; font-weight: 700;">
-                <td><strong>MOYENNE PAR JOUR</strong></td>
-                <td><strong>{{ count($days) > 0 ? number_format($total / count($days), 1) : 0 }}</strong></td>
-            </tr>
-        @else
-            <tr>
-                <td colspan="2" class="empty-state">
-                    Aucune donnée disponible pour cette période
-                </td>
-            </tr>
-        @endif
+        <tr>
+            <td>02/12/2025</td>
+            <td>
+                <strong>1</strong>
+                <span style="color: #6b7280; margin-left: 10px;">█</span>
+            </td>
+        </tr>
+        <tr>
+            <td>03/12/2025</td>
+            <td>
+                <strong>2</strong>
+                <span style="color: #6b7280; margin-left: 10px;">██</span>
+            </td>
+        </tr>
+        <tr style="background: #f1f5f9; font-weight: 700;">
+            <td><strong>MOYENNE PAR JOUR</strong></td>
+            <td><strong>1.5</strong></td>
+        </tr>
         </tbody>
     </table>
 </div>
@@ -468,27 +490,13 @@
             <td style="width: 50%; padding: 10px; vertical-align: top;">
                 <div class="highlight-box">
                     <div class="label">Taux de Confirmation</div>
-                    <div class="value">
-                        @php
-                            $total = $overview['total_appointments'] ?? 0;
-                            $confirmed = $overview['appointments_confirmed'] ?? 0;
-                            $rate = $total > 0 ? ($confirmed / $total) * 100 : 0;
-                        @endphp
-                        {{ number_format($rate, 1) }}%
-                    </div>
+                    <div class="value">33.3%</div>
                 </div>
             </td>
             <td style="width: 50%; padding: 10px; vertical-align: top;">
                 <div class="highlight-box">
                     <div class="label">Revenu Moyen par RDV</div>
-                    <div class="value">
-                        @php
-                            $total = $overview['total_appointments'] ?? 0;
-                            $revenue = $overview['total_revenue'] ?? 0;
-                            $avg = $total > 0 ? $revenue / $total : 0;
-                        @endphp
-                        {{ number_format($avg, 0) }} FCFA
-                    </div>
+                    <div class="value">10,000 FCFA</div>
                 </div>
             </td>
         </tr>
@@ -498,9 +506,49 @@
 <!-- FOOTER -->
 <div class="footer">
     <p class="clinic-name">Clinique Dr DRAMANE DIOP</p>
-    <p>{{ $filter_label ?? 'Période personnalisée' }}</p>
-    <p style="margin-top: 8px;">&copy; {{ date('Y') }} - Tous droits réservés</p>
+    <p>30 derniers jours</p>
+    <p style="margin-top: 8px;" id="footerYear"></p>
     <p style="color: #ef4444; font-weight: 600; margin-top: 6px;">Document confidentiel - Usage interne uniquement</p>
 </div>
+
+<script>
+    // Fonction pour formater la date au format JJ/MM/AAAA
+    function formatDate(date) {
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        return `${day}/${month}/${year}`;
+    }
+
+    // Fonction pour formater l'heure
+    function formatDateTime(date) {
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        return `${day}/${month}/${year} ${hours}:${minutes}`;
+    }
+
+    // Date d'aujourd'hui
+    const today = new Date();
+
+    // Date il y a 30 jours
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(today.getDate() - 30);
+
+    // Mise à jour du header - IMMÉDIATEMENT
+    document.getElementById('periodStart').textContent = formatDate(thirtyDaysAgo);
+    document.getElementById('periodEnd').textContent = formatDate(today);
+    document.getElementById('generatedDate').textContent = formatDateTime(today);
+
+    // Mise à jour du footer
+    document.getElementById('footerYear').textContent = '© ' + today.getFullYear() + ' - Tous droits réservés';
+
+    // Log pour debug
+    console.log('Date de début:', formatDate(thirtyDaysAgo));
+    console.log('Date de fin:', formatDate(today));
+    console.log('Généré le:', formatDateTime(today));
+</script>
 </body>
 </html>

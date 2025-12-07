@@ -6,6 +6,7 @@ use App\Models\Appointment;
 use App\Models\Availability;
 use App\Models\Doctor;
 use App\Notifications\AppointmentRescheduled;
+use App\Notifications\AppointmentRescheduleDoctor;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -291,6 +292,20 @@ class AssistantController extends Controller
                 );
             } catch (\Exception $e) {
                 \Log::error('Erreur notification patient: ' . $e->getMessage());
+            }
+            try {
+                $appointment->doctor->user->notify(
+                    new AppointmentRescheduleDoctor(
+                        $appointment,
+                        $oldDebutAt,
+                        $oldDebutAt->format('H:i'),
+                        $oldFinAt->format('H:i'),
+                        "l'assistant",
+                        $request->reason
+                    )
+                );
+            } catch (\Exception $e) {
+                \Log::error('Erreur notification médecin : ' . $e->getMessage());
             }
 
             // 🔔 NOTIFIER LE NOUVEAU MÉDECIN (si changement)

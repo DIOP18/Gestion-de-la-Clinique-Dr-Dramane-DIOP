@@ -20,7 +20,7 @@
         }
 
         /* Header */
-        .header {
+        .dote {
             background: linear-gradient(90deg, #1565c0, #1a237e);
             color: white;
             padding: 35px 30px;
@@ -241,19 +241,23 @@
         .page-break {
             page-break-after: always;
         }
+        h1 {
+            font-size: 32px;
+            text-align: center;
+            font-weight: 800;
+            margin-bottom: 25px;
+            color: #1a237e;
+            background: linear-gradient(90deg, #1565c0, #1a237e);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 0 3px 8px rgba(21, 101, 192, 0.2);
+        }
     </style>
 </head>
 <body>
-<!-- HEADER -->
-<div class="header">
-    <h1>Rapport Dashboard Médecin</h1>
-    <p class="doctor-info">Dr. {{ $doctor_name }} • {{ $specialty }}</p>
-    <div class="period">
-        📅 Période : {{ $period['start'] }} - {{ $period['end'] }}
-    </div>
-    <p class="generated">Généré le {{ $generated_at }}</p>
-</div>
-
+<h1>MES STATISTIQUES MEDECIN</h1>
 <!-- VUE D'ENSEMBLE -->
 <div class="section">
     <h2 class="section-title">Vue d'Ensemble</h2>

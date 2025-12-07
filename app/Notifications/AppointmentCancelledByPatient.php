@@ -42,6 +42,6 @@ class AppointmentCancelledByPatient extends Notification
             ->line('')
             ->line('ℹCe créneau horaire est maintenant disponible pour d\'autres patients.')
             ->action('Voir mon agenda', config('app.frontend_url') . '/medecin/mes-rendez-vous')
-            ->salutation('Cordialement, DR DRAMANE DIOP');
+            ->salutation('Cordialement, L\'équipe de la Clinique Dr DRAMANE DIOP');
     }
 }

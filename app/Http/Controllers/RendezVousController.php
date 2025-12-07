@@ -509,7 +509,7 @@ class RendezVousController extends Controller
                 'paye_par' => $request->paye_par
             ]);
 
-            Payment::create([
+           $payment= Payment::create([
                 'rendez_vous_id' => $appointment->id,
                 'patient_id' => $patient->id,
                 'amount' => $appointment->prix,
@@ -518,6 +518,11 @@ class RendezVousController extends Controller
                 'status' => 'PAYE',
                 'paid_at' => now(),
             ]);
+
+            \Log::info('STEP 11: Generating invoice for payment');
+            $invoice = $this->invoiceService->generateInvoiceForPayment($payment);
+            \Log::info('STEP 12: Invoice generated successfully - Number: ' . $invoice->invoice_number);
+
 
             DB::commit();
 
@@ -544,6 +549,7 @@ class RendezVousController extends Controller
                     'heure' => $appointment->debut_at->format('H:i'),
                 ]
             ], 200);
+
 
         } catch (\Exception $e) {
             DB::rollBack();

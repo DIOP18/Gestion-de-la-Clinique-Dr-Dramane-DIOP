@@ -42,6 +42,6 @@ class DoctorNewAppointment extends Notification
             ->line('Statut : **' . $appointment->statut . '**')
             ->action('Voir le rendez-vous', config('app.frontend_url') . '/medecin/mes-rendez-vous')
             ->line('Veuillez confirmer ou annuler ce rendez-vous dans les plus brefs délais.')
-            ->salutation('Cordialement, DR DRAMANE DIOP');
+            ->salutation('Cordialement, L\'équipe de la Clinique Dr DRAMANE DIOP');
     }
 }

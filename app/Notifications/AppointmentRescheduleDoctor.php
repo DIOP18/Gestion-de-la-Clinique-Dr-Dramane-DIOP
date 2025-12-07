@@ -8,7 +8,7 @@ use Illuminate\Notifications\Notification;
 use App\Models\Appointment;
 use Carbon\Carbon;
 
-class AppointmentRescheduled extends Notification
+class AppointmentRescheduleDoctor extends Notification
 {
     use Queueable;
 
@@ -61,13 +61,8 @@ class AppointmentRescheduled extends Notification
             ->line('**Nouveau rendez-vous :**')
             ->line(' Date : ' . $appointment->debut_at->format('d/m/Y'))
             ->line(' Horaire : ' . $appointment->debut_at->format('H:i') . ' - ' . $appointment->fin_at->format('H:i'))
-            ->line(' Médecin : Dr ' . $appointment->doctor->user->name)
-            ->line('Spécialité : ' . ($appointment->doctor->specialty->label ?? 'Non spécifié'));
+            ->line(' Patient : ' . $appointment->patient->user->name);
 
-        if ($appointment->est_paye) {
-            $mail->line('')
-                ->line(' Votre paiement a été transféré vers le nouveau rendez-vous.');
-        }
 
         return $mail->line('Merci de votre compréhension.')
             ->salutation('Cordialement, L\'équipe de la Clinique Dr DRAMANE DIOP');
