@@ -47,9 +47,6 @@ export class RsvPatientComponent implements OnInit {
     this.stripe = Stripe('pk_test_51SW2w63bKlYWTdntu4FGX31qG3PKThotlZMsXatDsxnTf2FuXpwf4QcmF8tlrd9J2H8tv2wLIJNW5ruYMP2Zvb3F00CJ6mKut9');
   }
 
-  /**
-   * ✅ MODIFIÉ - Charge tous les rendez-vous avec debug
-   */
   loadAppointments(): void {
     this.isLoading = true;
     this.errorMessage = '';
@@ -59,7 +56,6 @@ export class RsvPatientComponent implements OnInit {
         console.log('=== RAW API RESPONSE ===', response);
         this.appointments = response.appointments;
 
-        // ✅ DEBUG - Vérifie les données reçues
         console.log('=== APPOINTMENTS LOADED ===');
         this.appointments.forEach(apt => {
           console.log({
@@ -275,12 +271,12 @@ export class RsvPatientComponent implements OnInit {
           { payment_intent_id: paymentIntent.id }
         ).subscribe({
           next: (response) => {
-            console.log('✅ Server confirmation response:', response);
+            console.log(' Server confirmation response:', response);
             this.paymentStep = 'success';
             this.successMessage = response.message;
 
             setTimeout(() => {
-              this.loadAppointments(); // ✅ Recharge les données
+              this.loadAppointments();
               this.closePaymentModal();
             }, 2000);
           },
@@ -352,16 +348,11 @@ export class RsvPatientComponent implements OnInit {
       }
     });
   }
-  /**
-   * ✅ MODIFIÉ - Vérifie si on peut annuler
-   */
+
   canCancel(appointment: Appointment): boolean {
     return appointment.statut === 'EN ATTENTE';
   }
 
-  /**
-   * ✅ MODIFIÉ - Vérifie si on peut payer
-   */
   canPay(appointment: Appointment): boolean {
     const isConfirmed = appointment.statut === 'CONFIRME';
     const isNotPaid = !appointment.est_paye;
@@ -377,9 +368,6 @@ export class RsvPatientComponent implements OnInit {
     return isConfirmed && isNotPaid;
   }
 
-  /**
-   * ✅ MODIFIÉ - Vérifie si une facture est disponible
-   */
   hasInvoice(appointment: Appointment): boolean {
     const isPaid = appointment.est_paye;
     const hasInvoiceData = !!appointment.invoice;
@@ -395,9 +383,7 @@ export class RsvPatientComponent implements OnInit {
     return isPaid && hasInvoiceData;
   }
 
-  /**
-   * ✅ AJOUTÉ - Télécharge la facture
-   */
+
   downloadInvoice(appointment: Appointment): void {
     console.log('Downloading invoice for appointment:', appointment.id);
 
@@ -447,6 +433,11 @@ export class RsvPatientComponent implements OnInit {
       'REPORT': 'Reporté'
     };
     return statusLabels[statut] || statut;
+  }
+  showSuccess(message: string): void {
+    this.successMessage = message;
+    this.errorMessage = '';
+    setTimeout(() => this.successMessage = '', 5000);
   }
 
   onFilterChange(): void {

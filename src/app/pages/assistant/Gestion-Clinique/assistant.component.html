@@ -251,7 +251,6 @@
               <span class="price">{{ rdv.prix }} FCFA</span>
             </div>
           </td>
-          <!-- ✅ CORRECTION ICI - UN SEUL <td> avec les deux boutons -->
           <td>
             <div class="action-buttons">
               <button class="btn-view" (click)="openDetailsModal(rdv)" title="Voir les détails">
@@ -261,7 +260,6 @@
                 </svg>
                 Voir
               </button>
-
               <button
                 *ngIf="rdv.statut === 'CONFIRME' || rdv.statut === 'REPORT'"
                 class="btn-reschedule"
@@ -272,6 +270,7 @@
                 </svg>
                 Report
               </button>
+
             </div>
           </td>
         </tr>
@@ -435,6 +434,7 @@
       </div>
     </div>
 
+
     <div class="modal-footer">
       <button class="btn btn-secondary" (click)="closeDetailsModal()">Fermer</button>
     </div>
@@ -447,7 +447,7 @@
     <!-- Header -->
     <div class="modal-header">
       <div>
-        <h3>🔄 Reprogrammer le rendez-vous</h3>
+        <h3>Reprogrammer le rendez-vous</h3>
         <p class="modal-subtitle">
           Patient: <strong>{{ appointmentToReschedule.patient_name }}</strong> •
           RDV actuel: {{ appointmentToReschedule.date }} à {{ appointmentToReschedule.heure_debut }}
@@ -565,7 +565,7 @@
         (click)="confirmReschedule()"
         [disabled]="!selectedNewSlot || isSubmittingReschedule"
       >
-        <span *ngIf="!isSubmittingReschedule">✅ Confirmer la reprogrammation</span>
+        <span *ngIf="!isSubmittingReschedule">Confirmer la reprogrammation</span>
         <span *ngIf="isSubmittingReschedule">
           <div class="spinner-small"></div>
           Reprogrammation en cours...

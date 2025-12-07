@@ -202,7 +202,6 @@ export class CalendarComponent implements OnInit {
     });
   }
 
-  ///////Service de mailing a implementer
 
   goBack(): void {
     this.router.navigate(['/patient/dashboard']);

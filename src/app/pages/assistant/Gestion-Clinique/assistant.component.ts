@@ -53,7 +53,6 @@ export class AssistantComponent implements OnInit {
   showDetailsModal = false;
   selectedRendezVous: RendezVous | null = null;
 
-  // 🆕 Modal de reprogrammation
   showRescheduleModal = false;
   appointmentToReschedule: RendezVous | null = null;
   rescheduleReason = '';
@@ -61,14 +60,12 @@ export class AssistantComponent implements OnInit {
   isSubmittingReschedule = false;
   selectedNewSlot: any = null;
 
-  // 🆕 Liste des médecins pour les filtres du modal
   doctors: any[] = [];
   rescheduleFilters = {
     selectedDoctor: '',
     selectedSpecialty: ''
   };
 
-  // 🆕 Options du calendrier FullCalendar
   calendarOptions: CalendarOptions = {
     plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
     initialView: 'timeGridWeek',
@@ -94,13 +91,22 @@ export class AssistantComponent implements OnInit {
       minute: '2-digit',
       hour12: false
     },
+    slotLabelFormat: {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    },
     displayEventTime: true,
     displayEventEnd: true,
     eventDisplay: 'block',
     slotDuration: '00:30:00',
-    expandRows: true
+    slotLabelInterval: '01:00:00', // Affiche les heures toutes les heures pour plus de clarté
+    expandRows: true,
+    nowIndicator: true,
+    scrollTime: '08:00:00',
+    contentHeight: 'auto',
+    aspectRatio: 1.8
   };
-
   constructor(private assistantService: AssistantService) {}
 
   ngOnInit(): void {
@@ -128,16 +134,13 @@ export class AssistantComponent implements OnInit {
         this.specialties = response.specialties || [];
         this.doctors = response.doctors || [];
 
-        console.log('📅 Disponibilités chargées:', this.disponibilites.length);
-        console.log('📋 Rendez-vous chargés:', this.rendezVous.length);
-        console.log('🏥 Spécialités chargées:', this.specialties.length);
-        console.log('👨‍⚕️ Médecins chargés:', this.doctors.length);
+
 
         this.applyFilters();
         this.loading = false;
       },
       error: (error) => {
-        console.error('❌ Erreur chargement:', error);
+        console.error(' Erreur chargement:', error);
         console.error('Détails:', error.error);
         this.loading = false;
       }
@@ -145,7 +148,7 @@ export class AssistantComponent implements OnInit {
   }
 
   applyFilters(): void {
-    console.log('🔍 Application des filtres:', this.filters);
+    console.log('Application des filtres:', this.filters);
 
     // Filtrer disponibilités
     this.filteredDisponibilites = this.disponibilites.filter(dispo => {
@@ -176,8 +179,8 @@ export class AssistantComponent implements OnInit {
       return matchSearch && matchSpecialty && matchDate;
     });
 
-    console.log('✅ Disponibilités filtrées:', this.filteredDisponibilites.length);
-    console.log('✅ Rendez-vous filtrés:', this.filteredRendezVous.length);
+    console.log('Disponibilités filtrées:', this.filteredDisponibilites.length);
+    console.log('Rendez-vous filtrés:', this.filteredRendezVous.length);
   }
 
   resetFilters(): void {
@@ -191,7 +194,7 @@ export class AssistantComponent implements OnInit {
 
   switchTab(tab: 'disponibilites' | 'rendez-vous'): void {
     this.activeTab = tab;
-    console.log('📑 Onglet changé:', tab);
+    console.log('Onglet changé:', tab);
   }
 
   openDetailsModal(rdv: RendezVous): void {
@@ -204,12 +207,10 @@ export class AssistantComponent implements OnInit {
     this.selectedRendezVous = null;
   }
 
-  // 🆕 Vérifier si le RDV peut être reprogrammé
   canReschedule(appointment: RendezVous): boolean {
     return appointment.statut === 'CONFIRME';
   }
 
-  // 🆕 Ouvrir le modal de reprogrammation
   openRescheduleModal(appointment: RendezVous): void {
     this.appointmentToReschedule = appointment;
     this.showRescheduleModal = true;
@@ -220,11 +221,9 @@ export class AssistantComponent implements OnInit {
       selectedSpecialty: ''
     };
 
-    // Charger les disponibilités pour le calendrier
     this.loadAvailabilitiesForCalendar();
   }
 
-  // 🆕 Fermer le modal de reprogrammation
   closeRescheduleModal(): void {
     this.showRescheduleModal = false;
     this.appointmentToReschedule = null;
@@ -236,8 +235,6 @@ export class AssistantComponent implements OnInit {
     };
   }
 
-  // 🆕 Charger les disponibilités pour le calendrier
-// 🆕 Charger les disponibilités pour le calendrier
   loadAvailabilitiesForCalendar(): void {
     this.isLoadingCalendar = true;
 
@@ -273,19 +270,17 @@ export class AssistantComponent implements OnInit {
         this.isLoadingCalendar = false;
       },
       error: (error) => {
-        console.error('❌ Erreur chargement disponibilités calendrier:', error);
+        console.error(' Erreur chargement disponibilités calendrier:', error);
         alert('Erreur lors du chargement des disponibilités');
         this.isLoadingCalendar = false;
       }
     });
   }
-  // 🆕 Appliquer les filtres du modal de reprogrammation
   applyRescheduleFilters(): void {
-    console.log('🔍 Filtres reprogrammation:', this.rescheduleFilters);
+    console.log(' Filtres reprogrammation:', this.rescheduleFilters);
     this.loadAvailabilitiesForCalendar();
   }
 
-  // 🆕 Réinitialiser les filtres du modal
   resetRescheduleFilters(): void {
     this.rescheduleFilters = {
       selectedDoctor: '',
@@ -294,7 +289,6 @@ export class AssistantComponent implements OnInit {
     this.loadAvailabilitiesForCalendar();
   }
 
-  // 🆕 Gérer le clic sur un événement du calendrier
   handleCalendarEventClick(clickInfo: EventClickArg): void {
     const event = clickInfo.event;
 
@@ -306,25 +300,24 @@ export class AssistantComponent implements OnInit {
       extendedProps: event.extendedProps
     };
 
-    console.log('🎯 Créneau sélectionné:', this.selectedNewSlot);
+    console.log(' Créneau sélectionné:', this.selectedNewSlot);
   }
 
-  // 🆕 Confirmer la reprogrammation
   confirmReschedule(): void {
     if (!this.selectedNewSlot) {
-      alert('⚠️ Veuillez sélectionner un nouveau créneau sur le calendrier');
+      alert('Veuillez sélectionner un nouveau créneau sur le calendrier');
       return;
     }
 
     if (!this.appointmentToReschedule) {
-      alert('❌ Erreur : rendez-vous introuvable');
+      alert('Erreur : rendez-vous introuvable');
       return;
     }
 
     const confirmMessage = `Confirmer la reprogrammation ?\n\n` +
       `Ancien RDV : ${this.appointmentToReschedule.date} à ${this.appointmentToReschedule.heure_debut}\n` +
       `Nouveau RDV : ${this.formatDate(this.selectedNewSlot.start)} à ${this.formatTime(this.selectedNewSlot.start)}\n\n` +
-      `Le patient sera notifié par email.`;
+      `Le patient et le médecin seront notifiés par email.`;
 
     if (!confirm(confirmMessage)) {
       return;
@@ -338,15 +331,15 @@ export class AssistantComponent implements OnInit {
       this.rescheduleReason.trim() || undefined
     ).subscribe({
       next: (response) => {
-        console.log('✅ RDV reprogrammé:', response);
-        alert('✅ Rendez-vous reprogrammé avec succès ! Le patient et le médecin ont été notifiés par email.');
+        console.log('RDV reprogrammé:', response);
+        alert('Rendez-vous reprogrammé avec succès ! Le patient et le médecin ont été notifiés par email.');
 
         this.closeRescheduleModal();
         this.loadData(); // Recharger les données
         this.isSubmittingReschedule = false;
       },
       error: (error) => {
-        console.error('❌ Erreur reprogrammation:', error);
+        console.error('Erreur reprogrammation:', error);
 
         let errorMessage = 'Erreur lors de la reprogrammation';
         if (error.error?.error) {
@@ -355,13 +348,12 @@ export class AssistantComponent implements OnInit {
           errorMessage = error.error.message;
         }
 
-        alert(`❌ ${errorMessage}`);
+        alert(`${errorMessage}`);
         this.isSubmittingReschedule = false;
       }
     });
   }
 
-  // 🆕 Formater la date
   formatDate(date: Date | null): string {
     if (!date) return '';
     return new Date(date).toLocaleDateString('fr-FR', {
@@ -372,7 +364,6 @@ export class AssistantComponent implements OnInit {
     });
   }
 
-  // 🆕 Formater l'heure
   formatTime(date: Date | null): string {
     if (!date) return '';
     return new Date(date).toLocaleTimeString('fr-FR', {

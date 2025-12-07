@@ -154,7 +154,7 @@
             <!-- Annuler -->
             <button
               class="btn-action btn-cancel"
-              *ngIf="appointment.statut !== 'ANNULE' && appointment.statut !== 'COMPLETE' && appointment.statut!='CONFIRME'"
+              *ngIf="appointment.statut !== 'ANNULE' && appointment.statut!='CONFIRME' && appointment.statut!='REPORT'"
               (click)="cancelAppointment(appointment)"
               title="Annuler"
             >
@@ -164,7 +164,6 @@
               </svg>
             </button>
 
-            <!-- Reprogrammer (seulement si EN ATTENTE) -->
 
           </div>
         </td>

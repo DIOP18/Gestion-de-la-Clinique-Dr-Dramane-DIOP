@@ -28,9 +28,6 @@ export class RsvDocteurComponent implements OnInit {
     this.loadAppointments();
   }
 
-  /**
-   * Charge tous les rendez-vous
-   */
   loadAppointments(): void {
     this.isLoading = true;
     this.errorMessage = '';
@@ -49,9 +46,6 @@ export class RsvDocteurComponent implements OnInit {
     });
   }
 
-  /**
-   * Applique les filtres de recherche et statut
-   */
   applyFilters(): void {
     this.filteredAppointments = this.appointments.filter(apt => {
       const matchesStatus =
@@ -66,9 +60,6 @@ export class RsvDocteurComponent implements OnInit {
     });
   }
 
-  /**
-   * Confirme un rendez-vous
-   */
   confirmAppointment(appointment: Appointment): void {
     if (!confirm(`Confirmer le rendez-vous avec ${appointment.patient_full_name} ?`)) {
       return;
@@ -87,9 +78,6 @@ export class RsvDocteurComponent implements OnInit {
     });
   }
 
-  /**
-   * Annule un rendez-vous
-   */
   cancelAppointment(appointment: Appointment): void {
     if (!confirm(`Êtes-vous sûr d'annuler le rendez-vous avec ${appointment.patient_full_name} ?`)) {
       return;
@@ -108,25 +96,8 @@ export class RsvDocteurComponent implements OnInit {
     });
   }
 
-  /**
-   * Reprogramme un rendez-vous (à implémenter selon votre logique)
-   */
-  rescheduleAppointment(appointment: Appointment): void {
-    // TODO: Implémenter la logique de reprogrammation
-    // Par exemple: ouvrir un modal avec les disponibilités
-    alert('Fonctionnalité de reprogrammation à implémenter');
-  }
 
-  /**
-   * Vérifie si le bouton reprogrammer doit être affiché
-   */
-  canReschedule(appointment: Appointment): boolean {
-    return appointment.statut === 'CONFIRME';
-  }
 
-  /**
-   * Retourne la classe CSS selon le statut
-   */
   getStatusClass(statut: AppointmentStatus): string {
     const statusClasses: { [key in AppointmentStatus]: string } = {
       'EN ATTENTE': 'status-pending',
@@ -138,9 +109,6 @@ export class RsvDocteurComponent implements OnInit {
     return statusClasses[statut] || '';
   }
 
-  /**
-   * Retourne le libellé du statut en français
-   */
   getStatusLabel(statut: AppointmentStatus): string {
     const statusLabels: { [key in AppointmentStatus]: string } = {
       'EN ATTENTE': 'En attente',
@@ -152,16 +120,10 @@ export class RsvDocteurComponent implements OnInit {
     return statusLabels[statut] || statut;
   }
 
-  /**
-   * Gère le changement de filtre de statut
-   */
   onFilterChange(): void {
     this.applyFilters();
   }
 
-  /**
-   * Gère le changement de recherche
-   */
   onSearchChange(): void {
     this.applyFilters();
   }

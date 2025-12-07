@@ -12,27 +12,55 @@ function dateValidator(control: AbstractControl): ValidationErrors | null {
   }
   return null;
 }
+
 function consultationHoursValidator(control: AbstractControl): ValidationErrors | null {
   const form = control as FormGroup;
   const heureDebut = form.get('heure_debut')?.value;
   const heureFin = form.get('heure_fin')?.value;
 
-  if (heureDebut && heureFin) {
-    const minTime = 7 * 60;     // 7h00 en minutes
+  if (heureDebut) {
+    const minTime = 8 * 60;     // 8h00 en minutes
     const maxTime = 18 * 60;    // 18h00 en minutes
     const start = toMinutes(heureDebut);
-    const end = toMinutes(heureFin);
 
+    // Vérifier que l'heure de début est >= 8h
     if (start < minTime) {
       return { heureDebutTropTot: true };
     }
+
+    // Vérifier que l'heure de début est < 18h
+    if (start >= maxTime) {
+      return { heureDebutTropTard: true };
+    }
+  }
+
+  if (heureFin) {
+    const maxTime = 18 * 60;    // 18h00 en minutes
+    const end = toMinutes(heureFin);
+
+    // Vérifier que l'heure de fin est <= 18h
     if (end > maxTime) {
       return { heureFinTropTard: true };
     }
   }
+
+  if (heureDebut && heureFin) {
+    const start = toMinutes(heureDebut);
+    const end = toMinutes(heureFin);
+    const duree = end - start;
+
+    // Validation durée minimale de 10 minutes
+    if (duree < 10) {
+      return { dureeTropCourte: true };
+    }
+
+    // Validation durée maximale de 30 minutes
+    if (duree > 30) {
+      return { dureeTropLongue: true };
+    }
+  }
   return null;
 }
-
 
 function heureDebutValidator(control: AbstractControl): ValidationErrors | null {
   const form = control as FormGroup;
@@ -96,7 +124,7 @@ function toMinutes(time: string): number {
           </thead>
           <tbody>
           <tr *ngFor="let d of disponibilites">
-            <td>{{ d.date }}</td>
+            <td>{{ d.date | date:'dd/MM/yyyy' }}</td>
             <td>{{ d.heure_debut }}</td>
             <td>{{ d.heure_fin }}</td>
             <td>{{ d.duree_consultation_minutes }}</td>
@@ -110,7 +138,7 @@ function toMinutes(time: string): number {
       </div>
 
       <ng-template #noData>
-        <p>Aucune disponibilité enregistrée.</p>
+        <p class="no-data">Aucune disponibilité enregistrée.</p>
       </ng-template>
 
       <!-- MODAL -->
@@ -131,44 +159,63 @@ function toMinutes(time: string): number {
                   class="form-control"
                   [min]="today"
                 />
-                <!-- Messages d'erreur -->
                 <div *ngIf="form.get('date')!.invalid && (form.get('date')!.dirty || form.get('date')!.touched)" class="text-danger mt-1">
                   <small *ngIf="form.get('date')!.errors?.['required']">La date est obligatoire.</small>
-                  <small *ngIf="form.get('date')!.errors?.['dateInvalid']">La date ne peut pas être antérieure à aujourd’hui.</small>
+                  <small *ngIf="form.get('date')!.errors?.['dateInvalid']">La date ne peut pas être antérieure à aujourd'hui.</small>
                 </div>
               </div>
 
               <div class="form-group">
-                <label>Heure de début :</label>
+                <label>Heure de début : <span class="hint">(entre 08:00 et 17:59)</span></label>
                 <input
                   type="time"
                   formControlName="heure_debut"
                   class="form-control"
+                  min="08:00"
+                  max="17:59"
                 />
                 <div *ngIf="form.get('heure_debut')!.invalid && (form.get('heure_debut')!.dirty || form.get('heure_debut')!.touched)" class="text-danger mt-1">
                   <small *ngIf="form.get('heure_debut')!.errors?.['required']">L'heure de début est obligatoire.</small>
-                  <small *ngIf="form.get('heure_debut')!.errors?.['heureDebutInvalid']">L’heure de début doit être supérieure à l’heure actuelle.</small>
+                  <small *ngIf="form.get('heure_debut')!.errors?.['heureDebutInvalid']">L'heure de début doit être supérieure à l'heure actuelle.</small>
                 </div>
-
+                <div *ngIf="form.errors?.['heureDebutTropTot']" class="text-danger mt-1">
+                  <small>L'heure de début doit être au minimum 08:00.</small>
+                </div>
+                <div *ngIf="form.errors?.['heureDebutTropTard']" class="text-danger mt-1">
+                  <small>L'heure de début doit être inférieure à 18:00.</small>
+                </div>
               </div>
 
-
               <div class="form-group">
-                <label>Heure de fin :</label>
+                <label>Heure de fin : <span class="hint">(maximum 18:00)</span></label>
                 <input
                   type="time"
                   formControlName="heure_fin"
                   class="form-control"
+                  min="08:00"
+                  max="18:00"
+                  [disabled]="isHeureFinDisabled()"
                 />
-                <!-- Messages d'erreur -->
+                <div *ngIf="isHeureFinDisabled()" class="text-warning mt-1">
+                  <small> L'heure de début doit être inférieure à 18:00 pour définir une heure de fin.</small>
+                </div>
                 <div *ngIf="form.get('heure_fin')!.invalid && (form.get('heure_fin')!.dirty || form.get('heure_fin')!.touched)" class="text-danger mt-1">
                   <small *ngIf="form.get('heure_fin')!.errors?.['required']">L'heure de fin est obligatoire.</small>
-                  <small *ngIf="form.get('heure_fin')!.errors?.['heureFinInvalid']">L’heure de fin doit être supérieure à l’heure de début.</small>
+                  <small *ngIf="form.get('heure_fin')!.errors?.['heureFinInvalid']">L'heure de fin doit être supérieure à l'heure de début.</small>
+                </div>
+                <div *ngIf="form.errors?.['heureFinTropTard']" class="text-danger mt-1">
+                  <small>L'heure de fin doit être au maximum 18:00.</small>
+                </div>
+                <div *ngIf="form.errors?.['dureeTropCourte']" class="text-danger mt-1">
+                  <small>La durée minimale doit être de 10 minutes.</small>
+                </div>
+                <div *ngIf="form.errors?.['dureeTropLongue']" class="text-danger mt-1">
+                  <small>La durée maximale doit être de 30 minutes.</small>
                 </div>
               </div>
 
               <div class="form-group">
-                <label>Durée de consultation (minutes) :</label>
+                <label>Durée de consultation : <span class="hint">(10-30 minutes)</span></label>
                 <input
                   type="number"
                   formControlName="duree_consultation_minutes"
@@ -179,7 +226,7 @@ function toMinutes(time: string): number {
 
               <div class="modal-footer">
                 <button type="button" class="btn-secondary" (click)="closeModal()">Annuler</button>
-                <button type="submit" class="btn-primary" [disabled]="form.invalid">{{ editing ? 'Modifier' : 'Ajouter' }}</button>
+                <button type="submit" class="btn-primary" [disabled]="!isFormValid()">{{ editing ? 'Modifier' : 'Ajouter' }}</button>
               </div>
             </form>
           </div>
@@ -222,11 +269,23 @@ function toMinutes(time: string): number {
     .btn-primary:disabled {
       background: #ccc;
       cursor: not-allowed;
+      transform: none;
     }
     .alert {
       padding: 1rem;
       border-radius: 8px;
       margin-bottom: 1rem;
+      animation: slideIn 0.3s ease;
+    }
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
     .alert-success {
       background: #e8f5e9;
@@ -285,12 +344,23 @@ function toMinutes(time: string): number {
     .btn-delete:hover {
       background: #ffcdd2;
     }
+    .no-data {
+      text-align: center;
+      padding: 3rem;
+      color: #666;
+      font-size: 1.1rem;
+    }
     .modal-overlay {
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
       background: rgba(0, 0, 0, 0.5);
       display: flex; align-items: center; justify-content: center;
       z-index: 1000;
+      animation: fadeIn 0.2s ease;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
     }
     .modal {
       background: white;
@@ -298,6 +368,17 @@ function toMinutes(time: string): number {
       width: 90%;
       max-width: 500px;
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+      animation: slideUp 0.3s ease;
+    }
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
     .modal-header, .modal-body {
       padding: 1.5rem;
@@ -308,8 +389,43 @@ function toMinutes(time: string): number {
       align-items: center;
       border-bottom: 1px solid #e0e0e0;
     }
+    .modal-header h2 {
+      margin: 0;
+      color: #1a237e;
+      font-size: 1.5rem;
+    }
+    .close-btn {
+      background: none;
+      border: none;
+      font-size: 2rem;
+      color: #999;
+      cursor: pointer;
+      line-height: 1;
+      padding: 0;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+    }
+    .close-btn:hover {
+      background: #f5f5f5;
+      color: #333;
+    }
     .form-group {
       margin-bottom: 1.5rem;
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+      color: #333;
+    }
+    .hint {
+      font-size: 0.85rem;
+      font-weight: 400;
+      color: #666;
     }
     .form-control {
       width: 100%;
@@ -317,14 +433,24 @@ function toMinutes(time: string): number {
       border: 2px solid #e0e0e0;
       border-radius: 8px;
       font-size: 1rem;
+      transition: border-color 0.3s;
     }
     .form-control:focus {
       outline: none;
       border-color: #1565c0;
     }
+    .form-control[readonly] {
+      background: #f5f5f5;
+      cursor: not-allowed;
+    }
     .text-danger {
       color: #dc3545;
       font-size: 0.875rem;
+    }
+    .text-warning {
+      color: #ff9800;
+      font-size: 0.875rem;
+      font-weight: 500;
     }
     .mt-1 {
       margin-top: 0.25rem;
@@ -343,6 +469,7 @@ function toMinutes(time: string): number {
       border-radius: 8px;
       font-weight: 600;
       cursor: pointer;
+      transition: all 0.3s;
     }
     .btn-secondary:hover {
       background: #f5f5f5;
@@ -364,15 +491,28 @@ export class DisponibilitesComponent implements OnInit {
       date: new FormControl('', [Validators.required, dateValidator]),
       heure_debut: new FormControl('', [Validators.required]),
       heure_fin: new FormControl('', [Validators.required]),
-      duree_consultation_minutes: new FormControl({value: 0, disabled: false}), // désactivé => false
-    },
-      {  validators: [heureDebutValidator, heureFinValidator, consultationHoursValidator]
-
-      });
+      duree_consultation_minutes: new FormControl(0),
+    }, {
+      validators: [heureDebutValidator, heureFinValidator, consultationHoursValidator]
+    });
 
     // Calcul automatique de la durée
     this.form.valueChanges.subscribe(() => {
       this.calculateDuration();
+
+      // Réinitialiser l'heure de fin si l'heure de début est >= 18h
+      const heureDebut = this.form.get('heure_debut')?.value;
+      if (heureDebut) {
+        const startMinutes = toMinutes(heureDebut);
+        if (startMinutes >= 18 * 60) {
+          this.form.get('heure_fin')?.setValue('', { emitEvent: false });
+          this.form.get('heure_fin')?.disable({ emitEvent: false });
+        } else {
+          if (this.form.get('heure_fin')?.disabled) {
+            this.form.get('heure_fin')?.enable({ emitEvent: false });
+          }
+        }
+      }
     });
   }
 
@@ -386,18 +526,48 @@ export class DisponibilitesComponent implements OnInit {
 
   showSuccess(message: string): void {
     this.successMessage = message;
-    setTimeout(() => this.successMessage = '', 3000);
+    this.errorMessage = '';
+    setTimeout(() => this.successMessage = '', 5000);
   }
 
   showError(message: string): void {
     this.errorMessage = message;
-    setTimeout(() => this.errorMessage = '', 3000);
+    this.successMessage = '';
+    setTimeout(() => this.errorMessage = '', 5000);
   }
 
   loadDisponibilites(): void {
     this.dispoService.getAll().subscribe({
       next: (data) => this.disponibilites = data,
-      error: () => this.errorMessage = 'Erreur lors du chargement des disponibilités.'
+      error: () => this.showError('Erreur lors du chargement des disponibilités.')
+    });
+  }
+
+  // Vérifier si un créneau horaire chevauche avec les disponibilités existantes
+  checkOverlap(date: string, heureDebut: string, heureFin: string, excludeId?: number): boolean {
+    const start = toMinutes(heureDebut);
+    const end = toMinutes(heureFin);
+
+    return this.disponibilites.some(dispo => {
+      // Ignorer la disponibilité en cours de modification
+      if (excludeId && dispo.id === excludeId) {
+        return false;
+      }
+
+      // Vérifier si c'est la même date
+      if (dispo.date !== date) {
+        return false;
+      }
+
+      const existingStart = toMinutes(dispo.heure_debut);
+      const existingEnd = toMinutes(dispo.heure_fin);
+
+
+      return (
+        (start >= existingStart && start < existingEnd) ||
+        (end > existingStart && end <= existingEnd) ||
+        (start <= existingStart && end >= existingEnd)
+      );
     });
   }
 
@@ -422,12 +592,16 @@ export class DisponibilitesComponent implements OnInit {
     const heureDebut = this.form.get('heure_debut')?.value;
     const heureFin = this.form.get('heure_fin')?.value;
     if (heureDebut && heureFin) {
-      const start = toMinutes(heureDebut);
-      const end = toMinutes(heureFin);
-      if (end > start) {
-        this.form.get('duree_consultation_minutes')?.setValue(end - start);
-      } else {
-        this.form.get('duree_consultation_minutes')?.setValue(0);
+      try {
+        const start = toMinutes(heureDebut);
+        const end = toMinutes(heureFin);
+        if (end > start) {
+          this.form.get('duree_consultation_minutes')?.setValue(end - start, { emitEvent: false });
+        } else {
+          this.form.get('duree_consultation_minutes')?.setValue(0, { emitEvent: false });
+        }
+      } catch (e) {
+        this.form.get('duree_consultation_minutes')?.setValue(0, { emitEvent: false });
       }
     }
   }
@@ -435,25 +609,80 @@ export class DisponibilitesComponent implements OnInit {
   closeModal(): void {
     this.showModal = false;
     this.form.reset();
+    this.form.get('heure_fin')?.enable(); // Réactiver le champ
+  }
+
+  isHeureFinDisabled(): boolean {
+    const heureDebut = this.form.get('heure_debut')?.value;
+    if (!heureDebut) return false;
+    try {
+      return toMinutes(heureDebut) >= 18 * 60;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  isFormValid(): boolean {
+    // Vérifier que tous les champs requis sont remplis
+    const date = this.form.get('date')?.value;
+    const heureDebut = this.form.get('heure_debut')?.value;
+    const heureFin = this.form.get('heure_fin')?.value;
+
+    if (!date || !heureDebut || !heureFin) {
+      return false;
+    }
+
+    // Vérifier qu'il n'y a pas d'erreurs de validation sur le formulaire
+    // en ignorant les champs désactivés
+    if (this.form.get('date')?.invalid) return false;
+    if (this.form.get('heure_debut')?.invalid) return false;
+    if (this.form.get('heure_fin')?.invalid && !this.form.get('heure_fin')?.disabled) return false;
+
+    // Vérifier les erreurs au niveau du formulaire
+    if (this.form.errors) {
+      return false;
+    }
+
+    return true;
   }
 
   saveDisponibilite(): void {
-    if (this.form.invalid) return;
-    // Construire payload en forçant la valeur désactivée à être incluse
+    if (this.form.invalid) {
+      this.showError('Veuillez corriger les erreurs du formulaire.');
+      return;
+    }
+
+    const formValue = this.form.getRawValue();
+    const date = formValue.date;
+    const heureDebut = this.formatTime(formValue.heure_debut);
+    const heureFin = this.formatTime(formValue.heure_fin);
+
+    // Vérifier les chevauchements
+    const hasOverlap = this.checkOverlap(date, heureDebut, heureFin, formValue.id);
+
+    if (hasOverlap) {
+      this.showError('Cette plage horaire chevauche avec une disponibilité existante. Veuillez choisir un autre créneau.');
+      return;
+    }
+
+    // Construire payload
     const payload = {
-      ...this.form.getRawValue(),  // getRawValue inclut les champs désactivés
-      heure_debut: this.formatTime(this.form.value.heure_debut),
-      heure_fin: this.formatTime(this.form.value.heure_fin)
+      ...formValue,
+      heure_debut: heureDebut,
+      heure_fin: heureFin
     };
 
-    if (this.editing && this.form.value.id) {
-      this.dispoService.update(this.form.value.id, payload).subscribe({
+    if (this.editing && formValue.id) {
+      this.dispoService.update(formValue.id, payload).subscribe({
         next: () => {
           this.showSuccess('Disponibilité modifiée avec succès');
           this.loadDisponibilites();
           this.closeModal();
         },
-        error: (err) => this.showError('Erreur lors de la mise à jour : ' + JSON.stringify(err.error))
+        error: (err) => {
+          const errorMsg = err.error?.message || err.error?.error || 'Erreur lors de la mise à jour';
+          this.showError(errorMsg);
+        }
       });
     } else {
       this.dispoService.create(payload).subscribe({
@@ -462,7 +691,10 @@ export class DisponibilitesComponent implements OnInit {
           this.loadDisponibilites();
           this.closeModal();
         },
-        error: (err) => this.showError('Erreur lors de l’ajout : ' + JSON.stringify(err.error))
+        error: (err) => {
+          const errorMsg = err.error?.message || err.error?.error || 'Erreur lors de l\'ajout';
+          this.showError(errorMsg);
+        }
       });
     }
   }
@@ -471,7 +703,7 @@ export class DisponibilitesComponent implements OnInit {
     if (!confirm('Voulez-vous vraiment supprimer cette disponibilité ?')) return;
     this.dispoService.delete(id).subscribe({
       next: () => {
-        this.showSuccess('Disponibilité supprimée');
+        this.showSuccess('Disponibilité supprimée avec succès');
         this.loadDisponibilites();
       },
       error: () => this.showError('Erreur lors de la suppression')

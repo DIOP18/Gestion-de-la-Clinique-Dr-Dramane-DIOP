@@ -58,12 +58,12 @@ import { Specialite } from '../../../models/specialite.model';
           <div class="modal-body">
             <form (ngSubmit)="onSubmit()">
               <div class="form-group">
-                <label for="label">Libellé *</label>
+                <label for="label">Libellé</label>
                 <input type="text" id="label" [(ngModel)]="formData.label" name="label" required class="form-control" />
               </div>
 
               <div class="form-group">
-                <label for="prix">Prix consultation (XOF) *</label>
+                <label for="prix">Prix consultation</label>
                 <input type="number" id="prix" [(ngModel)]="formData.prix" name="prix" required min="0" class="form-control" />
               </div>
 

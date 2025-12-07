@@ -302,7 +302,7 @@ export class CalendarComponent implements OnInit {
         console.log('Rendez-vous créé:', response);
 
         // Message de succès personnalisé
-        alert(`✅ Rendez-vous confirmé avec succès !\n\nDr ${this.doctorName}\n${this.formatDate(this.selectedSlot.start)} à ${this.formatTime(this.selectedSlot.start)}`);
+        alert(`Rendez-vous confirmé avec succès !`);
 
         // Nettoyer
         this.closeMotifModal();
@@ -317,12 +317,12 @@ export class CalendarComponent implements OnInit {
 
         if (err.status === 409) {
           // Créneau déjà pris
-          alert('❌ Désolé, ce créneau vient d\'être réservé par un autre patient.');
+          alert(' Désolé, ce créneau vient d\'être réservé par un autre patient.');
           this.closeMotifModal();
           this.loadDisponibilites();
         } else if (err.status === 401) {
           // Session expirée
-          alert('⚠️ Votre session a expiré. Veuillez vous reconnecter.');
+          alert(' Votre session a expiré. Veuillez vous reconnecter.');
           sessionStorage.setItem('pending_slot_id', this.selectedSlot.id);
           sessionStorage.setItem('pending_slot_data', JSON.stringify(this.selectedSlot));
           this.router.navigate(['/auth/login'], {
@@ -333,14 +333,14 @@ export class CalendarComponent implements OnInit {
           const errors = err.error?.errors;
           if (errors) {
             const errorMessages = Object.values(errors).flat().join('\n');
-            alert(`❌ Erreur de validation :\n${errorMessages}`);
+            alert(` Erreur de validation :\n${errorMessages}`);
           } else {
-            alert('❌ Données invalides. Veuillez vérifier votre saisie.');
+            alert('Données invalides. Veuillez vérifier votre saisie.');
           }
         } else {
           // Autres erreurs
           const errorMsg = err.error?.message || err.error?.error || 'Erreur lors de la création du rendez-vous';
-          alert(`❌ ${errorMsg}`);
+          alert(` ${errorMsg}`);
         }
       }
     });
