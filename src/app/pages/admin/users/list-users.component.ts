@@ -252,7 +252,14 @@ type UserType = 'ADMINISTRATEUR' | 'MEDECIN' | 'ASSISTANT';
               <div class="form-row">
                 <div class="form-group">
                   <label>Email *</label>
-                  <input type="email" [(ngModel)]="formData.email" name="email" class="form-control" required>
+                  <input
+                    type="email"
+                    [(ngModel)]="formData.email"
+                    name="email"
+                    class="form-control"
+                    (blur)="validateEmail()"
+                    required>
+                  <small class="error-text" *ngIf="emailError">{{ emailError }}</small>
                 </div>
                 <div class="form-group">
                   <label>Mot de passe *</label>
@@ -262,6 +269,7 @@ type UserType = 'ADMINISTRATEUR' | 'MEDECIN' | 'ASSISTANT';
                       [(ngModel)]="formData.password"
                       name="password"
                       class="form-control"
+                      (blur)="validatePassword()"
                       required>
                     <button type="button" class="toggle-password" (click)="showPassword = !showPassword">
                       <svg *ngIf="!showPassword" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -274,13 +282,21 @@ type UserType = 'ADMINISTRATEUR' | 'MEDECIN' | 'ASSISTANT';
                       </svg>
                     </button>
                   </div>
+                  <small class="error-text" *ngIf="passwordError">{{ passwordError }}</small>
                 </div>
               </div>
 
               <div class="form-row">
                 <div class="form-group">
                   <label>Téléphone *</label>
-                  <input type="tel" [(ngModel)]="formData.phone" name="phone" class="form-control" required>
+                  <input
+                    type="tel"
+                    [(ngModel)]="formData.phone"
+                    name="phone"
+                    class="form-control"
+                    (blur)="validatePhone()"
+                    required>
+                  <small class="error-text" *ngIf="phoneError">{{ phoneError }}</small>
                 </div>
                 <div class="form-group">
                   <label>Genre *</label>
@@ -320,7 +336,7 @@ type UserType = 'ADMINISTRATEUR' | 'MEDECIN' | 'ASSISTANT';
 
               <div class="modal-footer">
                 <button type="button" class="btn-secondary" (click)="closeModal()">Annuler</button>
-                <button type="submit" class="btn-primary" [disabled]="loading">
+                <button type="submit" class="btn-primary" [disabled]="loading || emailError || phoneError || passwordError">
                   <span *ngIf="!loading">{{ isEdit ? 'Modifier' : 'Créer' }} l'utilisateur</span>
                   <span *ngIf="loading">{{ isEdit ? 'Modification' : 'Création' }} en cours...</span>
                 </button>
@@ -394,6 +410,7 @@ type UserType = 'ADMINISTRATEUR' | 'MEDECIN' | 'ASSISTANT';
     .image-preview img { max-width: 200px; border-radius: 8px; }
     .modal-footer { display: flex; gap: 1rem; justify-content: flex-end; margin-top: 2rem; }
     .btn-secondary { background: transparent; color: #666; border: 2px solid #e0e0e0; padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; cursor: pointer; }
+    .error-text { color: #c62828; font-size: 0.85rem; margin-top: 0.25rem; display: block; }
     @media (max-width: 768px) { .type-cards, .form-row { grid-template-columns: 1fr; } }
   `]
 })
@@ -415,6 +432,11 @@ export class ListUsersComponent implements OnInit {
   isEdit = false;
   editUserId: number | null = null;
   userForm!: FormGroup;
+
+  // Variables pour les erreurs de validation
+  emailError = '';
+  phoneError = '';
+  passwordError = '';
 
 
   constructor(
@@ -470,6 +492,9 @@ export class ListUsersComponent implements OnInit {
     this.imagePreview = null;
     this.showPassword = false;
     this.selectedImage = null;
+    this.emailError = '';
+    this.phoneError = '';
+    this.passwordError = '';
   }
 
   closeModal(): void {
@@ -513,9 +538,68 @@ export class ListUsersComponent implements OnInit {
   }
 
   onSubmit(): void {
-    if (!this.selectedImage) {
+    // Validation de l'image
+    if (!this.selectedImage && !this.isEdit) {
       this.showError('Veuillez sélectionner une photo de profil');
       return;
+    }
+
+    // Validation des champs obligatoires
+    if (!this.formData.first_name || !this.formData.last_name ||
+      !this.formData.email || !this.formData.phone ||
+      !this.formData.address || !this.formData.gender) {
+      this.showError('Veuillez remplir tous les champs obligatoires');
+      return;
+    }
+
+    // Validation du mot de passe (seulement pour création)
+    if (!this.isEdit && !this.formData.password) {
+      this.showError('Le mot de passe est obligatoire');
+      return;
+    }
+
+    // Validation de l'email (format et doublon)
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(this.formData.email)) {
+      this.showError('Format d\'email invalide');
+      return;
+    }
+
+    const emailExists = this.users.some(u =>
+      u.email.toLowerCase() === this.formData.email.toLowerCase() &&
+      (!this.isEdit || u.id !== this.editUserId)
+    );
+    if (emailExists) {
+      this.showError('Cet email est déjà utilisé par un autre compte');
+      return;
+    }
+
+    // Validation du téléphone (doublon)
+    const phoneExists = this.users.some(u =>
+      u.phone === this.formData.phone &&
+      (!this.isEdit || u.id !== this.editUserId)
+    );
+    if (phoneExists) {
+      this.showError('Ce numéro de téléphone est déjà utilisé par un autre compte');
+      return;
+    }
+
+    // Validation du mot de passe (doublon - seulement pour création)
+    if (!this.isEdit && this.formData.password) {
+      // Note: Cette validation est limitée car on ne peut pas comparer avec les mots de passe hashés
+      // On vérifie au moins la longueur minimale
+      if (this.formData.password.length < 6) {
+        this.showError('Le mot de passe doit contenir au moins 6 caractères');
+        return;
+      }
+    }
+
+    // Validation spécifique pour les médecins
+    if (this.selectedUserType === 'MEDECIN') {
+      if (!this.formData.description || !this.formData.specialty_id) {
+        this.showError('Veuillez remplir la description et la spécialité pour un médecin');
+        return;
+      }
     }
 
     this.loading = true;
@@ -617,5 +701,65 @@ export class ListUsersComponent implements OnInit {
     this.errorMessage = message;
     this.successMessage = '';
     setTimeout(() => this.errorMessage = '', 5000);
+  }
+
+  // Méthodes de validation en temps réel
+  validateEmail(): void {
+    this.emailError = '';
+
+    if (!this.formData.email) {
+      this.emailError = 'L\'email est obligatoire';
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(this.formData.email)) {
+      this.emailError = 'Format d\'email invalide';
+      return;
+    }
+
+    const emailExists = this.users.some(u =>
+      u.email.toLowerCase() === this.formData.email.toLowerCase() &&
+      (!this.isEdit || u.id !== this.editUserId)
+    );
+
+    if (emailExists) {
+      this.emailError = 'Cet email est déjà utilisé';
+    }
+  }
+
+  validatePhone(): void {
+    this.phoneError = '';
+
+    if (!this.formData.phone) {
+      this.phoneError = 'Le téléphone est obligatoire';
+      return;
+    }
+
+    const phoneExists = this.users.some(u =>
+      u.phone === this.formData.phone &&
+      (!this.isEdit || u.id !== this.editUserId)
+    );
+
+    if (phoneExists) {
+      this.phoneError = 'Ce numéro est déjà utilisé';
+    }
+  }
+
+  validatePassword(): void {
+    this.passwordError = '';
+
+    if (this.isEdit && !this.formData.password) {
+      return; // Mot de passe optionnel en modification
+    }
+
+    if (!this.formData.password) {
+      this.passwordError = 'Le mot de passe est obligatoire';
+      return;
+    }
+
+    if (this.formData.password.length < 6) {
+      this.passwordError = 'Minimum 6 caractères requis';
+    }
   }
 }
